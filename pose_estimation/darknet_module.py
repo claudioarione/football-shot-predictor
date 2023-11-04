@@ -9,6 +9,8 @@ def draw_object_bounding_box(image_to_process, box):
     :param box: coordinates of the area around the object
     :return: image with marked objects
     """
+    if not box:
+        return
     x, y, w, h = box
     start = (x, y)
     end = (x + w, y + h)
@@ -20,15 +22,29 @@ def draw_object_bounding_box(image_to_process, box):
 
 
 def identify_players(boxes):
-    # For simplicity, only consider the two largest detected persons, assuming they are the goalkeeper and the attacker
+    """
+    For simplicity, only consider the two largest detected persons, assuming they are the goalkeeper and the attacker
+
+    :param boxes: A list of tuples where each one contains the coordinates
+                            of the upper-left corner, width, and height of a detected person's
+                            bounding box in the format (x, y, width, height).
+
+    :return: A tuple containing the bounding boxes of the goalkeeper and attacker,
+           or None for each if they cannot be determined.
+    """
+    if not boxes:
+        return None, None
+
     sorted_boxes = sorted(boxes, key=lambda x: x[2] * x[3], reverse=True)
     # The player closer to the center of the goal (typically upper half of the image) is likely the goalkeeper
-    # FIXME until now, the attacker is the biggest, the keeper is the 2nd biggest. There are some
-    #  problems after the player has shot the ball
+    # FIXME until now, the attacker is the biggest, the keeper is the 2nd biggest.
+    #  There are some problems after the player has shot the ball
+    if len(sorted_boxes) == 1:
+        return sorted_boxes[0], None
+
     goalkeeper = sorted_boxes[1]
     attacker = sorted_boxes[0]
-
-    return goalkeeper, attacker
+    return attacker, goalkeeper
 
 
 def non_maxima_suppression(boxes, class_scores):
@@ -115,6 +131,7 @@ def analyze_video():
         # Identify attacker and goalkeeper
         a, g = identify_players(filtered_boxes)
         # Draw boundaries for attacker and goalkeeper
+
         draw_object_bounding_box(frame, a)
         draw_object_bounding_box(frame, g)
 
