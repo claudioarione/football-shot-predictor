@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import poseModule as pm
 
 
 def draw_object_bounding_box(image_to_process, box):
@@ -109,11 +110,14 @@ class YOLO:
         return output_from_network
 
 
-def analyze_video():
+def analyze_video(video_path: str):
     model = YOLO()
 
-    video = cv2.VideoCapture('../data/Penalty_Neymar.mp4')
+    video = cv2.VideoCapture(video_path)
     size = (480, 288)
+
+    detector_attacker = pm.PoseDetector()
+    detector_goalkeeper = pm.PoseDetector()
 
     # Defining loop for catching frames
     while True:
@@ -130,18 +134,26 @@ def analyze_video():
         filtered_boxes = non_maxima_suppression(boxes, class_scores)
         # Identify attacker and goalkeeper
         a, g = identify_players(filtered_boxes)
-        # Draw boundaries for attacker and goalkeeper
+        if a:
+            x_a, y_a, w_a, h_a = a
+            attacker_image = frame[y_a:y_a + h_a, x_a:x_a + w_a]
+            detector_attacker.find_pose(attacker_image)
+        if g:
+            x_g, y_g, w_g, h_g = g
+            goalkeeper_image = frame[y_g:y_g + h_g, x_g:x_g + w_g]
+            detector_goalkeeper.find_pose(goalkeeper_image)
 
+        # Draw boundaries for attacker and goalkeeper
         draw_object_bounding_box(frame, a)
         draw_object_bounding_box(frame, g)
 
         cv2.imshow('Image', frame)
 
-        cv2.waitKey(10)
+        cv2.waitKey(1)
 
     video.release()
     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
-    analyze_video()
+    analyze_video('../data/video01.MOV')
