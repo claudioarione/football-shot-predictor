@@ -1,5 +1,6 @@
 import cv2
 
+
 class YOLO:
 
     def __init__(self):

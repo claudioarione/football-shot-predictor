@@ -6,41 +6,111 @@ from pose_estimation.yolo_model import YOLO
 
 def draw_object_bounding_box(image_to_process, box):
     """
-    Drawing object borders with captions
+    Draws a bounding box around the object in the image.
     :param image_to_process: original image
     :param box: coordinates of the area around the object
     :return: image with marked objects
     """
     if not box:
         return
-    x, y, w, h = box
-    start = (x, y)
-    end = (x + w, y + h)
+    x, y, width, height = box
+    start_point = (x, y)
+    end_point = (x + width, y + height)
     color = (0, 255, 0)
-    width = 2
-    final_image = cv2.rectangle(image_to_process, start, end, color, width)
+    thickness = 1
+    image_with_box = cv2.rectangle(image_to_process, start_point, end_point, color, thickness)
 
-    return final_image
+    return image_with_box
 
 
-def identify_players(boxes):
+def center_of_box(box) -> np.array:
+    """
+    :param box: coordinates of the area around the object
+    :return: coordinates of the center of the box
+    """
+    x, y, width, height = box
+    return np.array([x + width / 2, y + height / 2])
+
+
+def euclidean_distance(center1, center2):
+    return np.linalg.norm(center1 - center2)
+
+
+def find_similar_boxes(current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40):
+    # if not previous_large_boxes:
+    #     return current_frame_boxes
+    # if all(element is None for element in previous_large_boxes):
+    #     return current_frame_boxes
+    # similar_boxes = []
+    # for previous_box in previous_large_boxes:
+    #     if previous_box:
+    #         prev_center = center_of_box(previous_box)
+    #         closest_box = None
+    #         closest_distance = float('inf')
+    #         for current_box in current_frame_boxes:
+    #             current_center = center_of_box(current_box)
+    #             distance = euclidean_distance(prev_center, current_center)
+    #             if distance < closest_distance:
+    #                 closest_distance = distance
+    #                 closest_box = current_box
+    #         if closest_distance <= threshold:
+    #             similar_boxes.append(closest_box)
+
+    # TODO: improve this code
+    if not previous_attacker and not previous_goalkeeper:
+        return current_frame_boxes
+
+    similar_boxes = []
+    if previous_attacker:
+        prev_center = center_of_box(previous_attacker)
+        closest_box = None
+        closest_distance = float('inf')
+        for curr_box in current_frame_boxes:
+            curr_center = center_of_box(curr_box)
+            distance = euclidean_distance(prev_center, curr_center)
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_box = curr_box
+        if closest_distance <= threshold:
+            similar_boxes.append(closest_box)
+
+    if previous_goalkeeper:
+        prev_center = center_of_box(previous_goalkeeper)
+        closest_box = None
+        closest_distance = float('inf')
+        for curr_box in current_frame_boxes:
+            curr_center = center_of_box(curr_box)
+            distance = euclidean_distance(prev_center, curr_center)
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_box = curr_box
+        if closest_distance <= threshold:
+            similar_boxes.append(closest_box)
+    return similar_boxes
+
+
+def identify_players(boxes, previous_attacker, previous_goalkeeper):
     """
     For simplicity, only consider the two largest detected persons, assuming they are the goalkeeper and the attacker
 
     :param boxes: A list of tuples where each one contains the coordinates
                             of the upper-left corner, width, and height of a detected person's
                             bounding box in the format (x, y, width, height).
-
+    :param previous_attacker: The bounding box of the attacker in the previous frame.
+    :param previous_goalkeeper: The bounding box of the goalkeeper in the previous frame.
     :return: A tuple containing the bounding boxes of the goalkeeper and attacker,
            or None for each if they cannot be determined.
     """
     if not boxes:
         return None, None
 
-    sorted_boxes = sorted(boxes, key=lambda x: x[2] * x[3], reverse=True)
-    # The player closer to the center of the goal (typically upper half of the image) is likely the goalkeeper
-    # FIXME until now, the attacker is the biggest, the keeper is the 2nd biggest.
-    #  There are some problems after the player has shot the ball
+    similar_boxes = find_similar_boxes(boxes, previous_attacker, previous_goalkeeper)
+
+    if not similar_boxes:
+        return None, None
+
+    sorted_boxes = sorted(similar_boxes, key=lambda x: x[2] * x[3], reverse=True)
+
     if len(sorted_boxes) == 1:
         return sorted_boxes[0], None
 
@@ -90,14 +160,27 @@ def identify_all_persons(outputs, shape, threshold=0):
     return boxes, class_scores
 
 
+def process_player(frame, player, detector: pm.PoseDetector) -> None:
+    """
+    :param frame: the frame of the video
+    :param player: the player to estimate the pose
+    :param detector: the mediapipe pose detector
+    """
+    if not player:
+        return
+    x, y, w, h = player
+    player_image = frame[y:y + h, x:x + w]
+    detector.find_pose(player_image)
+
+
 def analyze_video(video_path: str):
     model = YOLO()
 
     video = cv2.VideoCapture(video_path)
     size = (480, 288)
 
-    detector_attacker = pm.PoseDetector()
-    detector_goalkeeper = pm.PoseDetector()
+    attacker_detector, goalkeeper_detector = pm.PoseDetector(), pm.PoseDetector()
+    previous_attacker, previous_goalkeeper = None, None
 
     # Defining loop for catching frames
     while True:
@@ -112,28 +195,27 @@ def analyze_video(video_path: str):
 
         # Selection
         filtered_boxes = non_maxima_suppression(boxes, class_scores)
+
         # Identify attacker and goalkeeper
-        a, g = identify_players(filtered_boxes)
-        if a:
-            x_a, y_a, w_a, h_a = a
-            attacker_image = frame[y_a:y_a + h_a, x_a:x_a + w_a]
-            detector_attacker.find_pose(attacker_image)
-        if g:
-            x_g, y_g, w_g, h_g = g
-            goalkeeper_image = frame[y_g:y_g + h_g, x_g:x_g + w_g]
-            detector_goalkeeper.find_pose(goalkeeper_image)
+        current_attacker, current_goalkeeper = identify_players(filtered_boxes, previous_attacker, previous_goalkeeper)
+        previous_attacker, previous_goalkeeper = current_attacker, current_goalkeeper
+
+        # Process players (pose estimation
+        process_player(frame, current_attacker, attacker_detector)
+        process_player(frame, current_goalkeeper, goalkeeper_detector)
 
         # Draw boundaries for attacker and goalkeeper
-        draw_object_bounding_box(frame, a)
-        draw_object_bounding_box(frame, g)
+        draw_object_bounding_box(frame, current_attacker)
+        draw_object_bounding_box(frame, current_goalkeeper)
 
         cv2.imshow('Image', frame)
 
-        cv2.waitKey(1)
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # Exit on pressing 'q'
+            break
 
     video.release()
     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
-    analyze_video('../data/video01.MOV')
+    analyze_video('../data/Penalty_Neymar.mp4')
