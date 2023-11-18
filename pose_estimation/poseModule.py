@@ -9,8 +9,16 @@ class PoseDetector:
     """
 
     # TODO: analyze better the params of Pose class
-    def __init__(self, static_image_mode=False, model_complexity=1, smooth_landmarks=True, enable_segmentation=False,
-                 smooth_segmentation=True, min_detection_confidence=0.5, min_tracking_confidence=0.5):
+    def __init__(
+        self,
+        static_image_mode=False,
+        model_complexity=1,
+        smooth_landmarks=True,
+        enable_segmentation=False,
+        smooth_segmentation=True,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
+    ):
         """
         Initializes the pose detector with the specified parameters.
 
@@ -26,9 +34,15 @@ class PoseDetector:
         self.results = None
         self.mp_draw = mp.solutions.drawing_utils
         self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose(static_image_mode, model_complexity, smooth_landmarks,
-                                      enable_segmentation, smooth_segmentation, min_detection_confidence,
-                                      min_tracking_confidence)
+        self.pose = self.mp_pose.Pose(
+            static_image_mode,
+            model_complexity,
+            smooth_landmarks,
+            enable_segmentation,
+            smooth_segmentation,
+            min_detection_confidence,
+            min_tracking_confidence,
+        )
 
     def find_pose(self, img, draw: bool = True):
         """
@@ -44,7 +58,9 @@ class PoseDetector:
         img_RGB.flags.writeable = True
         if self.results.pose_landmarks:
             if draw:
-                self.mp_draw.draw_landmarks(img, self.results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS)
+                self.mp_draw.draw_landmarks(
+                    img, self.results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS
+                )
         return img
 
     def get_position(self, img, draw: bool = True):
@@ -74,7 +90,7 @@ def test():
     # # WHICH POSE ESTIMATOR TO USE.
     # selected_pose_idx = 0
 
-    cap = cv2.VideoCapture('../data/Penalty_Neymar.mp4')
+    cap = cv2.VideoCapture("../data/Penalty_Neymar.mp4")
     previous_time = 0
     detector = PoseDetector()
     while True:  # TODO: maybe is better cap.isOpened() and cap.release()
@@ -87,10 +103,12 @@ def test():
         current_time = time.time()
         fps = 1 / (current_time - previous_time)
         previous_time = current_time
-        cv2.putText(img, str(int(fps)), (70, 50), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 3)
+        cv2.putText(
+            img, str(int(fps)), (70, 50), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 3
+        )
         cv2.imshow("Image", img)
         cv2.waitKey(10)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test()

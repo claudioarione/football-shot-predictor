@@ -2,6 +2,14 @@ import cv2
 import numpy as np
 import poseModule as pm
 from pose_estimation.yolo_model import YOLO
+import cvzone
+import cvzone.ColorModule as cm
+
+
+def find_ball_bounding_box(frame, color_finder: cm.ColorFinder, hsv_vals: dict):
+    _, mask = color_finder.update(frame, hsv_vals)
+    _, contours = cvzone.findContours(frame, mask, minArea=1000)
+    return contours[0]["bbox"] if contours else None
 
 
 def draw_object_bounding_box(image_to_process, box):
@@ -18,7 +26,9 @@ def draw_object_bounding_box(image_to_process, box):
     end_point = (x + width, y + height)
     color = (0, 255, 0)
     thickness = 1
-    image_with_box = cv2.rectangle(image_to_process, start_point, end_point, color, thickness)
+    image_with_box = cv2.rectangle(
+        image_to_process, start_point, end_point, color, thickness
+    )
 
     return image_with_box
 
@@ -36,7 +46,9 @@ def euclidean_distance(center1, center2):
     return np.linalg.norm(center1 - center2)
 
 
-def find_similar_boxes(current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40):
+def find_similar_boxes(
+    current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
+):
     # if not previous_large_boxes:
     #     return current_frame_boxes
     # if all(element is None for element in previous_large_boxes):
@@ -63,8 +75,9 @@ def find_similar_boxes(current_frame_boxes, previous_attacker, previous_goalkeep
     similar_boxes = []
     if previous_attacker:
         prev_center = center_of_box(previous_attacker)
+        print("attacker_center: ", prev_center)
         closest_box = None
-        closest_distance = float('inf')
+        closest_distance = float("inf")
         for curr_box in current_frame_boxes:
             curr_center = center_of_box(curr_box)
             distance = euclidean_distance(prev_center, curr_center)
@@ -76,8 +89,9 @@ def find_similar_boxes(current_frame_boxes, previous_attacker, previous_goalkeep
 
     if previous_goalkeeper:
         prev_center = center_of_box(previous_goalkeeper)
+        print("goalkeeper_center: ", prev_center)
         closest_box = None
-        closest_distance = float('inf')
+        closest_distance = float("inf")
         for curr_box in current_frame_boxes:
             curr_center = center_of_box(curr_box)
             distance = euclidean_distance(prev_center, curr_center)
@@ -141,7 +155,6 @@ def identify_all_persons(outputs, shape, threshold=0):
             scores = obj[5:]
             class_index = np.argmax(scores)
             class_score = scores[class_index]
-
             if class_index != 0:
                 # The identified object is not a person
                 continue
@@ -152,8 +165,12 @@ def identify_all_persons(outputs, shape, threshold=0):
                 obj_width = int(obj[2] * width)
                 obj_height = int(obj[3] * height)
 
-                box = [center_x - obj_width // 2, center_y - obj_height // 2,
-                       obj_width, obj_height]
+                box = [
+                    center_x - obj_width // 2,
+                    center_y - obj_height // 2,
+                    obj_width,
+                    obj_height,
+                ]
                 boxes.append(box)
                 class_scores.append(float(class_score))
 
@@ -169,7 +186,7 @@ def process_player(frame, player, detector: pm.PoseDetector) -> None:
     if not player:
         return
     x, y, w, h = player
-    player_image = frame[y:y + h, x:x + w]
+    player_image = frame[y : y + h, x : x + w]
     detector.find_pose(player_image)
 
 
@@ -181,8 +198,10 @@ def analyze_video(video_path: str):
 
     attacker_detector, goalkeeper_detector = pm.PoseDetector(), pm.PoseDetector()
     previous_attacker, previous_goalkeeper = None, None
+    color_finder = cm.ColorFinder(False)
+    # FIXME: The problem is that the values are not good if just the size of the image changes
+    hsv_vals = {"hmin": 0, "smin": 24, "vmin": 200, "hmax": 50, "smax": 61, "vmax": 255}
 
-    # Defining loop for catching frames
     while True:
         ret, frame = video.read()
         if not ret:
@@ -192,15 +211,23 @@ def analyze_video(video_path: str):
 
         outputs = model.evaluate(frame)
         boxes, class_scores = identify_all_persons(outputs, size)
+        ball_box = find_ball_bounding_box(
+            frame=frame, color_finder=color_finder, hsv_vals=hsv_vals
+        )
+        if ball_box:
+            center_ball = center_of_box(ball_box)
+            print("center ball: ", center_ball)
 
         # Selection
         filtered_boxes = non_maxima_suppression(boxes, class_scores)
 
         # Identify attacker and goalkeeper
-        current_attacker, current_goalkeeper = identify_players(filtered_boxes, previous_attacker, previous_goalkeeper)
+        current_attacker, current_goalkeeper = identify_players(
+            filtered_boxes, previous_attacker, previous_goalkeeper
+        )
         previous_attacker, previous_goalkeeper = current_attacker, current_goalkeeper
 
-        # Process players (pose estimation
+        # Process players (pose estimation)
         process_player(frame, current_attacker, attacker_detector)
         process_player(frame, current_goalkeeper, goalkeeper_detector)
 
@@ -208,9 +235,9 @@ def analyze_video(video_path: str):
         draw_object_bounding_box(frame, current_attacker)
         draw_object_bounding_box(frame, current_goalkeeper)
 
-        cv2.imshow('Image', frame)
+        cv2.imshow("Image", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):  # Exit on pressing 'q'
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     video.release()
@@ -218,4 +245,4 @@ def analyze_video(video_path: str):
 
 
 if __name__ == "__main__":
-    analyze_video('../data/Penalty_Neymar.mp4')
+    analyze_video("../data/Penalty_Neymar.mp4")

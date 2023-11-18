@@ -2,12 +2,12 @@ import cv2
 
 
 class YOLO:
-
     def __init__(self):
         # Create net from the given config file and weights, belonging to a pre-trained
         # YOLO model
-        self.network = cv2.dnn.readNetFromDarknet('../data/training/yolov4-tiny.cfg',
-                                                  '../data/training/yolov4-tiny.weights')
+        self.network = cv2.dnn.readNetFromDarknet(
+            "../data/training/yolov4-tiny.cfg", "../data/training/yolov4-tiny.weights"
+        )
         # Set CPU as the target - TODO use GPU
         self.network.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
         # Set up the names of the final layers of the network
