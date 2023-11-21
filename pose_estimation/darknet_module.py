@@ -47,7 +47,7 @@ def euclidean_distance(center1, center2):
 
 
 def find_similar_boxes(
-    current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
+        current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
 ):
     # if not previous_large_boxes:
     #     return current_frame_boxes
@@ -191,8 +191,38 @@ def process_player(frame, player, detector: pm.PoseDetector) -> None:
     if not player:
         return
     x, y, w, h = player
-    player_image = frame[y : y + h, x : x + w]
+    player_image = frame[y: y + h, x: x + w]
     detector.find_pose(player_image)
+
+
+def check_if_stop_video(ball_box, image, attacker_detector: pm.PoseDetector, threshold_in_pixels=12):
+    """
+    States if the video must be stopped, i.e., if the foot of the attacker
+    is close to impact the ball
+    :param ball_box: coordinates of the area around the ball
+    :param image: the box of the attacker, represented as an array containing, in order, x, y, width and height
+    :param attacker_detector: detector of the attacker
+    :param threshold_in_pixels: defines an acceptability threshold for keypoints' proximity to ball
+    :return: boolean value
+    """
+
+    if ball_box is None:
+        return False
+
+    keypoints = attacker_detector.get_position(image)
+    # Remember that feet keypoints have an id greater or equal than 27
+    feet_keypoints = [keypoint for keypoint in keypoints if keypoint[0] >= 27]
+
+    for keypoint in feet_keypoints:
+        keypoint_center = keypoint[1:]
+        ball_center = center_of_box(ball_box)
+        # Check if the keypoint is enough close to the ball
+        if euclidean_distance(keypoint_center, ball_center) < threshold_in_pixels:
+            # If so, the video must be stopped
+            return True
+
+    # If no keypoint is enough close to the ball, the video should resume normally
+    return False
 
 
 def analyze_video(video_path: str):
@@ -239,7 +269,10 @@ def analyze_video(video_path: str):
 
         cv2.imshow("Image", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        stop = check_if_stop_video(soccer_ball_box, current_attacker, attacker_detector)
+        wait_until_next_frame = 10000 if stop else 1
+
+        if cv2.waitKey(wait_until_next_frame) & 0xFF == ord("q"):
             break
 
     video.release()
