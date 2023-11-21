@@ -139,7 +139,7 @@ def non_maxima_suppression(boxes, class_scores):
     return boxes
 
 
-def identify_all_persons(outputs, shape, threshold=0):
+def identify_all_objects(outputs, shape, threshold=0):
     """
     :param outputs: 2D NumPy array derived from a CNN
     :param shape: a tuple having the width as first coordinate and the height as second
@@ -149,14 +149,16 @@ def identify_all_persons(outputs, shape, threshold=0):
     """
     width, height = shape
     class_scores, boxes = [], []
+    soccer_ball = None
 
     for out in outputs:
         for obj in out:
             scores = obj[5:]
             class_index = np.argmax(scores)
             class_score = scores[class_index]
-            if class_index != 0:
-                # The identified object is not a person
+
+            if class_index != 0 and class_index != 32:
+                # The identified object is neither a person nor a ball
                 continue
 
             if class_score > threshold:
@@ -171,10 +173,13 @@ def identify_all_persons(outputs, shape, threshold=0):
                     obj_width,
                     obj_height,
                 ]
-                boxes.append(box)
-                class_scores.append(float(class_score))
+                if class_index == 0:
+                    boxes.append(box)
+                    class_scores.append(float(class_score))
+                else:
+                    soccer_ball = box
 
-    return boxes, class_scores
+    return boxes, class_scores, soccer_ball
 
 
 def process_player(frame, player, detector: pm.PoseDetector) -> None:
@@ -194,14 +199,14 @@ def analyze_video(video_path: str):
     model = YOLO()
 
     video = cv2.VideoCapture(video_path)
-    size = (480, 288)
+    size_factor = 32
+    width_rel, height_rel = 18, 12
+    size = (size_factor * width_rel, size_factor * height_rel)
 
     attacker_detector, goalkeeper_detector = pm.PoseDetector(), pm.PoseDetector()
     previous_attacker, previous_goalkeeper = None, None
-    color_finder = cm.ColorFinder(False)
-    # FIXME: The problem is that the values are not good if just the size of the image changes
-    hsv_vals = {"hmin": 0, "smin": 24, "vmin": 200, "hmax": 50, "smax": 61, "vmax": 255}
 
+    # Defining loop for catching frames
     while True:
         ret, frame = video.read()
         if not ret:
@@ -210,13 +215,10 @@ def analyze_video(video_path: str):
         frame = cv2.resize(frame, size)
 
         outputs = model.evaluate(frame)
-        boxes, class_scores = identify_all_persons(outputs, size)
-        ball_box = find_ball_bounding_box(
-            frame=frame, color_finder=color_finder, hsv_vals=hsv_vals
-        )
-        if ball_box:
-            center_ball = center_of_box(ball_box)
-            print("center ball: ", center_ball)
+        boxes, class_scores, soccer_ball_box = identify_all_objects(outputs, size)
+
+        if soccer_ball_box:
+            draw_object_bounding_box(frame, soccer_ball_box)
 
         # Selection
         filtered_boxes = non_maxima_suppression(boxes, class_scores)
