@@ -236,6 +236,8 @@ def analyze_video(video_path: str):
     attacker_detector, goalkeeper_detector = pm.PoseDetector(), pm.PoseDetector()
     previous_attacker, previous_goalkeeper = None, None
 
+    stop = False
+
     # Defining loop for catching frames
     while True:
         ret, frame = video.read()
@@ -243,6 +245,12 @@ def analyze_video(video_path: str):
             break
         # Resize the frame
         frame = cv2.resize(frame, size)
+        original_image = frame.copy()
+
+        if stop:
+            cv2.imshow("Image", frame)
+            cv2.waitKey(100)
+            continue
 
         outputs = model.evaluate(frame)
         boxes, class_scores, soccer_ball_box = identify_all_objects(outputs, size)
@@ -267,10 +275,9 @@ def analyze_video(video_path: str):
         draw_object_bounding_box(frame, current_attacker)
         draw_object_bounding_box(frame, current_goalkeeper)
 
-        cv2.imshow("Image", frame)
-
         stop = check_if_stop_video(soccer_ball_box, current_attacker, attacker_detector)
-        wait_until_next_frame = 10000 if stop else 1
+        cv2.imshow("Image", original_image if stop else frame)
+        wait_until_next_frame = 2000 if stop else 1
 
         if cv2.waitKey(wait_until_next_frame) & 0xFF == ord("q"):
             break
