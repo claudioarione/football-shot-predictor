@@ -63,22 +63,20 @@ class PoseDetector:
                 )
         return img
 
-    def get_position(self, img, draw: bool = True):
+    def get_position(self, image_box):
         """
         Obtains the position of human pose landmarks.
 
-        :param img: The image from which landmarks are to be identified.
-        :param draw: Whether to draw the landmarks on the image.
+        :param image_box: The image box from which landmarks are to be identified, as an array containing,
+                            in order, x, y, width and height.
         :return: A list, in which each element contains the landmark id and x and y coordinates.
         """
         landmarks_list = []
         if self.results.pose_landmarks:
-            for id, landmark in enumerate(self.results.pose_landmarks.landmark):
-                height, width, channels = img.shape
-                cx, cy = int(landmark.x * width), int(landmark.y * height)
-                landmarks_list.append([id, cx, cy])
-                if draw:
-                    cv2.circle(img, (cx, cy), 5, (255, 0, 0), cv2.FILLED)
+            for position, landmark in enumerate(self.results.pose_landmarks.landmark):
+                x, y, w, h = image_box
+                cx, cy = int(x + landmark.x * w), int(y + landmark.y * h)
+                landmarks_list.append([position, cx, cy])
         return landmarks_list
 
 
@@ -95,6 +93,9 @@ def test():
     detector = PoseDetector()
     while True:  # TODO: maybe is better cap.isOpened() and cap.release()
         success, img = cap.read()
+        if not success:
+            break
+        img = cv2.resize(img, (0, 0), None, 0.7, 0.7)
         img = detector.find_pose(img)
         landmarks_list = detector.get_position(img)
         print(landmarks_list)  # debug
@@ -107,7 +108,7 @@ def test():
             img, str(int(fps)), (70, 50), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 3
         )
         cv2.imshow("Image", img)
-        cv2.waitKey(10)
+        cv2.waitKey(int(fps) + 1)
 
 
 if __name__ == "__main__":
