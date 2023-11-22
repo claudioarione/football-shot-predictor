@@ -5,6 +5,8 @@ from pose_estimation.yolo_model import YOLO
 import cvzone
 import cvzone.ColorModule as cm
 
+import data_preprocessing as dp
+
 
 def find_ball_bounding_box(frame, color_finder: cm.ColorFinder, hsv_vals: dict):
     _, mask = color_finder.update(frame, hsv_vals)
@@ -47,7 +49,7 @@ def euclidean_distance(center1, center2):
 
 
 def find_similar_boxes(
-        current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
+    current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
 ):
     # if not previous_large_boxes:
     #     return current_frame_boxes
@@ -75,7 +77,7 @@ def find_similar_boxes(
     similar_boxes = []
     if previous_attacker:
         prev_center = center_of_box(previous_attacker)
-        print("attacker_center: ", prev_center)
+        # print("attacker_center: ", prev_center)
         closest_box = None
         closest_distance = float("inf")
         for curr_box in current_frame_boxes:
@@ -89,7 +91,7 @@ def find_similar_boxes(
 
     if previous_goalkeeper:
         prev_center = center_of_box(previous_goalkeeper)
-        print("goalkeeper_center: ", prev_center)
+        # print("goalkeeper_center: ", prev_center)
         closest_box = None
         closest_distance = float("inf")
         for curr_box in current_frame_boxes:
@@ -191,11 +193,13 @@ def process_player(frame, player, detector: pm.PoseDetector) -> None:
     if not player:
         return
     x, y, w, h = player
-    player_image = frame[y: y + h, x: x + w]
+    player_image = frame[y : y + h, x : x + w]
     detector.find_pose(player_image)
 
 
-def check_if_stop_video(ball_box, image, attacker_detector: pm.PoseDetector, threshold_in_pixels=12):
+def check_if_stop_video(
+    ball_box, image, attacker_detector: pm.PoseDetector, threshold_in_pixels=25
+):
     """
     States if the video must be stopped, i.e., if the foot of the attacker
     is close to impact the ball
@@ -225,17 +229,25 @@ def check_if_stop_video(ball_box, image, attacker_detector: pm.PoseDetector, thr
     return False
 
 
-def analyze_video(video_path: str):
+# FIXME: this is for training
+def preprocess(all_features: np.array, landmarks_list: list) -> np.array:
+    landmarks_array = np.array(landmarks_list[:][:])  # take only feet keypoints
+    frame_features = landmarks_array[:, 1:].flatten()  # Exclude keypoint_id
+    all_features = np.concatenate([all_features, frame_features])
+    return all_features
+
+
+def analyze_video(path: str, output: int, data: list) -> list:
     model = YOLO()
 
-    video = cv2.VideoCapture(video_path)
+    video = cv2.VideoCapture(path)
     size_factor = 32
-    width_rel, height_rel = 18, 12
+    width_rel, height_rel = 20, 15
     size = (size_factor * width_rel, size_factor * height_rel)
 
     attacker_detector, goalkeeper_detector = pm.PoseDetector(), pm.PoseDetector()
     previous_attacker, previous_goalkeeper = None, None
-
+    attacker_features = []
     stop = False
 
     # Defining loop for catching frames
@@ -269,6 +281,8 @@ def analyze_video(video_path: str):
 
         # Process players (pose estimation)
         process_player(frame, current_attacker, attacker_detector)
+        landmarks_attacker_list = attacker_detector.get_position(current_attacker)
+        attacker_features = preprocess(attacker_features, landmarks_attacker_list)
         process_player(frame, current_goalkeeper, goalkeeper_detector)
 
         # Draw boundaries for attacker and goalkeeper
@@ -284,7 +298,26 @@ def analyze_video(video_path: str):
 
     video.release()
     cv2.destroyAllWindows()
+    data.append(
+        np.append(attacker_features[-33 * 10 :], output)  # FIXME: this is for training
+    )  # 33 keypoints * last 10 frames before kick
+    return data
+
+
+# FIXME: this is for training
+def create_training_dataset():
+    dataset = []
+    videos = {
+        "../data/Penalty_Neymar.mp4": 1,
+        "../data/Penalty_Lampard.mp4": 0,
+        "../data/Penalty_Mata.mp4": 1,
+        "../data/Penalty_Olic.mp4": 1,
+    }
+    for video_path, label in videos.items():
+        dataset = analyze_video(path=video_path, output=label, data=dataset)
+    dataset_array = np.array(dataset)
+    np.save("../data/training_data.npy", dataset_array)
 
 
 if __name__ == "__main__":
-    analyze_video("../data/Penalty_Neymar.mp4")
+    create_training_dataset()
