@@ -74,13 +74,36 @@ def identify_posts(image, ang_coeff_threshold=10, post_acceptability_threshold=6
     return left_post, right_post
 
 
+def draw_shaded_rectangles_in_goal(image, left_post, right_post):
+    x1_1, y_high, x2_1, y_low = left_post
+    x1_2, _, x2_2, _ = right_post
+
+    # Create an empty image for shaded rectangles
+    shaded_rectangles = np.zeros_like(image)
+
+    # Define boundaries - remember that x1_1 ≈ x2_1 and x1_2 ≈ x2_2
+    rect_width = int(abs((x1_2 + x2_2) / 2 - (x1_1 + x2_1) / 2) / 3)
+    left_rect_top_left, left_rect_bottom_right = (x1_1, y_high), (x1_1 + rect_width, y_low)
+    center_rect_top_left, center_rect_bottom_right = (x1_1 + rect_width, y_high), (x1_2 - rect_width, y_low)
+    right_rect_top_left, right_rect_bottom_right = (x1_2 - rect_width, y_high), (x1_2, y_low)
+
+    # Shade rectangles in the separate image
+    cv2.rectangle(shaded_rectangles, left_rect_top_left, left_rect_bottom_right, (255, 0, 0), -1)  # Blue
+    cv2.rectangle(shaded_rectangles, center_rect_top_left, center_rect_bottom_right, (0, 255, 0), -1)  # Green
+    cv2.rectangle(shaded_rectangles, right_rect_top_left, right_rect_bottom_right, (0, 0, 255), -1)  # Red
+
+    # Add the shaded rectangles to the original image
+    return cv2.addWeighted(image, 1, shaded_rectangles, 0.5, 0)
+
+
 if __name__ == "__main__":
     image = cv2.imread('../data/ball_image.png')
     image = cv2.resize(image, (32 * 20, 32 * 15))
 
-    left_post, right_post = identify_posts(image)
+    left_post, right_post = identify_posts(image, draw=False)
+    result_image = draw_shaded_rectangles_in_goal(image, left_post, right_post)
 
     # Display the result
-    cv2.imshow('Result', image)
+    cv2.imshow('Result', result_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
