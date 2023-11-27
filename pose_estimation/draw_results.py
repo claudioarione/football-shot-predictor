@@ -59,18 +59,26 @@ def identify_posts(image, ang_coeff_threshold=10, post_acceptability_threshold=6
     # Identify possible left and right post among all the candidates
     left_post, right_post = _search_posts(long_vertical_lines, image.shape[1], image.shape[0],
                                           post_acceptability_threshold, horizontal_offset, vertical_offset)
+    # Set the height to the same value for both posts
+    y_start, y_end = min(left_post[3], right_post[3]), max(left_post[1], right_post[1])
+    left_post[3] = y_start
+    right_post[3] = y_start
+    left_post[1] = y_end
+    right_post[1] = y_end
 
     # If needed, draw posts on the original image
     if draw:
         cv2.line(image, (left_post[0], left_post[1]), (left_post[2], left_post[3]), (0, 255, 0), 2)
         cv2.line(image, (right_post[0], right_post[1]), (right_post[2], right_post[3]), (0, 255, 0), 2)
 
+    return left_post, right_post
+
 
 if __name__ == "__main__":
     image = cv2.imread('../data/ball_image.png')
     image = cv2.resize(image, (32 * 20, 32 * 15))
 
-    identify_posts(image)
+    left_post, right_post = identify_posts(image)
 
     # Display the result
     cv2.imshow('Result', image)
