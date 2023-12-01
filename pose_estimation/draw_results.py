@@ -74,7 +74,7 @@ def identify_posts(image, ang_coeff_threshold=10, post_acceptability_threshold=6
     return left_post, right_post
 
 
-def draw_shaded_rectangles_in_goal(image, left_post, right_post):
+def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
     x1_1, y_high, x2_1, y_low = left_post
     x1_2, _, x2_2, _ = right_post
 
@@ -87,10 +87,25 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post):
     center_rect_top_left, center_rect_bottom_right = (x1_1 + rect_width, y_high), (x1_2 - rect_width, y_low)
     right_rect_top_left, right_rect_bottom_right = (x1_2 - rect_width, y_high), (x1_2, y_low)
 
+    # Define width and height of a percentage of type 0.xx% in the given font - assuming the percentages to be correctly passed
+    #(text_width, text_height), _ = cv2.getTextSize("0.33%", cv2.FONT_HERSHEY_SIMPLEX, 0.01, 1)
+    #text_offset_x, text_offset_y = ((rect_width // 2) - text_width) // 2, ((y_high - y_low) // 2 - text_height) // 2
+    text_offset_x, text_offset_y = rect_width // 3, (y_high - y_low) // 4
+
+    left_text_start = (x1_1 + text_offset_x, y_low + text_offset_y)
+    center_text_start = (x1_1 + rect_width + text_offset_x, y_low + text_offset_y)
+    right_text_start = (x1_2 - rect_width + text_offset_x, y_low + text_offset_y)
+
     # Shade rectangles in the separate image
+    # TODO change opacity with respect to the highest probability
     cv2.rectangle(shaded_rectangles, left_rect_top_left, left_rect_bottom_right, (255, 0, 0), -1)  # Blue
     cv2.rectangle(shaded_rectangles, center_rect_top_left, center_rect_bottom_right, (0, 255, 0), -1)  # Green
     cv2.rectangle(shaded_rectangles, right_rect_top_left, right_rect_bottom_right, (0, 0, 255), -1)  # Red
+
+    # Add text on the shaded rectangles
+    cv2.putText(image, str(percentages[0]) + "%", left_text_start, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(image, str(percentages[1]) + "%", center_text_start, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(image, str(percentages[2]) + "%", right_text_start, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
     # Add the shaded rectangles to the original image
     return cv2.addWeighted(image, 1, shaded_rectangles, 0.5, 0)
@@ -101,7 +116,7 @@ if __name__ == "__main__":
     image = cv2.resize(image, (32 * 20, 32 * 15))
 
     left_post, right_post = identify_posts(image, draw=False)
-    result_image = draw_shaded_rectangles_in_goal(image, left_post, right_post)
+    result_image = draw_shaded_rectangles_in_goal(image, left_post, right_post, [0.4, 0.2, 0.2])
 
     # Display the result
     cv2.imshow('Result', result_image)
