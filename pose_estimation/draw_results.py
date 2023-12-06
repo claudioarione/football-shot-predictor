@@ -111,12 +111,17 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
     return cv2.addWeighted(image, 1, shaded_rectangles, 0.5, 0)
 
 
+def draw_shot_predictions(image, lcr_probabilities):
+    left_post, right_post = identify_posts(image, draw=False)
+    result_image = draw_shaded_rectangles_in_goal(image, left_post, right_post, lcr_probabilities)
+    return result_image
+
+
 if __name__ == "__main__":
     image = cv2.imread('../data/ball_image.png')
     image = cv2.resize(image, (32 * 20, 32 * 15))
 
-    left_post, right_post = identify_posts(image, draw=False)
-    result_image = draw_shaded_rectangles_in_goal(image, left_post, right_post, [0.4, 0.2, 0.2])
+    result_image = draw_shot_predictions(image, [0.4, 0.2, 0.2])
 
     # Display the result
     cv2.imshow('Result', result_image)
