@@ -19,7 +19,7 @@ class XGBoostClassifier:
         xgbc.fit(self.X_train, self.y_train)
         self.classifier = xgbc
 
-    def evaluate_accuracy(self):
+    def evaluate_train_accuracy(self):
         if not hasattr(self, 'classifier'):
             print('Cannot evaluate accuracy before training the model')
             return 0
@@ -41,4 +41,4 @@ if __name__ == "__main__":
 
     classifier.train_model()
 
-    print("The XGBoost accuracy over the test sample is:", classifier.evaluate_accuracy())
+    print("The XGBoost accuracy over the train sample is:", classifier.evaluate_train_accuracy())
