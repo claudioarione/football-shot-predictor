@@ -9,8 +9,13 @@ class XGBoostClassifier:
         self.X_train = data[:, :-1]
         self.y_train = data[:, -1]
 
-    def train_model(self, n_estimators=100, max_depth=1, learning_rate=0.15):
-        xgbc = XGBClassifier(n_estimators, max_depth, learning_rate)
+    def train_model(self):
+        xgbc = XGBClassifier(
+            objective='multi:softprob',  # Use 'multi:softprob' for multiclass problems
+            num_class=3,  # Number of classes in the classification problem
+            eval_metric='mlogloss'  # Use 'mlogloss' for multiclass logloss
+        )
+
         xgbc.fit(self.X_train, self.y_train)
         self.classifier = xgbc
 
@@ -18,15 +23,22 @@ class XGBoostClassifier:
         if not hasattr(self, 'classifier'):
             print('Cannot evaluate accuracy before training the model')
             return 0
-        return np.mean(self.y_train == self.classifier.predict(self.X_train))
+
+        predictions_matrix = self.classifier.predict(self.X_train)
+        predictions_vector = [[index for index, value in enumerate(list_m) if value == 1] for list_m in predictions_matrix]
+        predictions_vector = [el for list_pred in predictions_vector for el in list_pred]
+
+        return np.mean(self.y_train == predictions_vector)
 
     def predict_class(self, X_sample):
-        return self.classifier.predict(X_sample)
+        if X_sample.ndim == 1:
+            X_sample = [X_sample]
+        return self.classifier.predict_proba(X_sample)
 
 
 if __name__ == "__main__":
     classifier = XGBoostClassifier("../data/training_data.npy")
 
-    classifier.train_model(n_estimators=100, max_depth=1, learning_rate=0.15)
+    classifier.train_model()
 
     print("The XGBoost accuracy over the test sample is:", classifier.evaluate_accuracy())
