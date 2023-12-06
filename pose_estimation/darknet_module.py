@@ -4,8 +4,8 @@ import poseModule as pm
 from pose_estimation.yolo_model import YOLO
 import cvzone
 import cvzone.ColorModule as cm
-
-import data_preprocessing as dp
+import draw_results as draw
+from train_classification_model import XGBoostClassifier
 
 
 def find_ball_bounding_box(frame, color_finder: cm.ColorFinder, hsv_vals: dict):
@@ -49,7 +49,7 @@ def euclidean_distance(center1, center2):
 
 
 def find_similar_boxes(
-    current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
+        current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
 ):
     # if not previous_large_boxes:
     #     return current_frame_boxes
@@ -193,12 +193,12 @@ def process_player(frame, player, detector: pm.PoseDetector) -> None:
     if not player:
         return
     x, y, w, h = player
-    player_image = frame[y : y + h, x : x + w]
+    player_image = frame[y: y + h, x: x + w]
     detector.find_pose(player_image)
 
 
 def check_if_stop_video(
-    ball_box, image, attacker_detector: pm.PoseDetector, threshold_in_pixels=25
+        ball_box, image, attacker_detector: pm.PoseDetector, threshold_in_pixels=25
 ):
     """
     States if the video must be stopped, i.e., if the foot of the attacker
@@ -248,7 +248,10 @@ def analyze_video(path: str, output: int, data: list) -> list:
     attacker_detector, goalkeeper_detector = pm.PoseDetector(), pm.PoseDetector()
     previous_attacker, previous_goalkeeper = None, None
     attacker_features = []
+    # Define a variable saying if a stop is needed and another if the prediction has to be computed
     stop = False
+    predict = False
+    debug = False  # TODO change
 
     # Defining loop for catching frames
     while True:
@@ -260,8 +263,17 @@ def analyze_video(path: str, output: int, data: list) -> list:
         original_image = frame.copy()
 
         if stop:
-            cv2.imshow("Image", frame)
-            cv2.waitKey(100)
+            # Predict the direction of the shoot if needed
+            if predict and not debug:
+                # TODO add a global list tailored for classification of this specific video!
+                lcr_probabilities = [0.4, 0.4, 0.2]
+                cv2.imshow("Image", draw.draw_shot_predictions(frame, lcr_probabilities))
+                cv2.waitKey(1000)
+                predict = False
+            else:
+                cv2.imshow("Image", frame)
+                cv2.waitKey(100)
+
             continue
 
         outputs = model.evaluate(frame)
@@ -289,9 +301,11 @@ def analyze_video(path: str, output: int, data: list) -> list:
         draw_object_bounding_box(frame, current_attacker)
         draw_object_bounding_box(frame, current_goalkeeper)
 
-        stop = check_if_stop_video(soccer_ball_box, current_attacker, attacker_detector)
         cv2.imshow("Image", original_image if stop else frame)
-        wait_until_next_frame = 2000 if stop else 1
+        wait_until_next_frame = 5000 if stop else 1
+
+        stop = check_if_stop_video(soccer_ball_box, current_attacker, attacker_detector)
+        predict = stop
 
         if cv2.waitKey(wait_until_next_frame) & 0xFF == ord("q"):
             break
@@ -299,7 +313,7 @@ def analyze_video(path: str, output: int, data: list) -> list:
     video.release()
     cv2.destroyAllWindows()
     data.append(
-        np.append(attacker_features[-33 * 10 :], output)  # FIXME: this is for training
+        np.append(attacker_features[-33 * 10:], output)  # FIXME: this is for training
     )  # 33 keypoints * last 10 frames before kick
     return data
 
