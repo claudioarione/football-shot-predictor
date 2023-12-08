@@ -2,16 +2,7 @@ import cv2
 import numpy as np
 import poseModule as pm
 from pose_estimation.yolo_model import YOLO
-import cvzone
-import cvzone.ColorModule as cm
 import draw_results as draw
-from train_classification_model import XGBoostClassifier
-
-
-def find_ball_bounding_box(frame, color_finder: cm.ColorFinder, hsv_vals: dict):
-    _, mask = color_finder.update(frame, hsv_vals)
-    _, contours = cvzone.findContours(frame, mask, minArea=1000)
-    return contours[0]["bbox"] if contours else None
 
 
 def draw_object_bounding_box(image_to_process, box):
@@ -49,7 +40,7 @@ def euclidean_distance(center1, center2):
 
 
 def find_similar_boxes(
-        current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
+    current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
 ):
     # if not previous_large_boxes:
     #     return current_frame_boxes
@@ -193,12 +184,12 @@ def process_player(frame, player, detector: pm.PoseDetector) -> None:
     if not player:
         return
     x, y, w, h = player
-    player_image = frame[y: y + h, x: x + w]
+    player_image = frame[y : y + h, x : x + w]
     detector.find_pose(player_image)
 
 
 def check_if_stop_video(
-        ball_box, image, attacker_detector: pm.PoseDetector, threshold_in_pixels=25
+    ball_box, image, attacker_detector: pm.PoseDetector, threshold_in_pixels=25
 ):
     """
     States if the video must be stopped, i.e., if the foot of the attacker
@@ -267,7 +258,9 @@ def analyze_video(path: str, output: int, data: list) -> list:
             if predict and not debug:
                 # TODO add a global list tailored for classification of this specific video!
                 lcr_probabilities = [0.4, 0.4, 0.2]
-                cv2.imshow("Image", draw.draw_shot_predictions(frame, lcr_probabilities))
+                cv2.imshow(
+                    "Image", draw.draw_shot_predictions(frame, lcr_probabilities)
+                )
                 cv2.waitKey(1000)
                 predict = False
             else:
@@ -313,7 +306,7 @@ def analyze_video(path: str, output: int, data: list) -> list:
     video.release()
     cv2.destroyAllWindows()
     data.append(
-        np.append(attacker_features[-33 * 10:], output)  # FIXME: this is for training
+        np.append(attacker_features[-33 * 10 :], output)  # FIXME: this is for training
     )  # 33 keypoints * last 10 frames before kick
     return data
 
