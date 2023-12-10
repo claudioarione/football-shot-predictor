@@ -3,6 +3,7 @@ from pose_estimation.poseModule import PoseDetector
 import utils
 import cv2
 import numpy as np
+import pandas as pd
 
 
 def analyze_video(path: str, output: int, data: list, width_rel=20, height_rel=15) -> list:
@@ -72,19 +73,11 @@ def analyze_video(path: str, output: int, data: list, width_rel=20, height_rel=1
 
 
 # FIXME: this is for training
-def create_training_dataset():
+def create_training_dataset(training_dataframe: pd.DataFrame, save_training_data_path: str):
     dataset = []
-    videos = {
-        "data/Penalty_Neymar.mp4": 2,
-        "data/Penalty_Lampard.mp4": 1,
-        "data/Penalty_Mata.mp4": 2,
-        "data/Penalty_Olic.mp4": 0 # FIXME this label is incorrect but the data must have at least one 0, 1 and 2
-    }
+    videos = dict(zip(training_dataframe["link"], training_dataframe["label"]))
+    print(videos)
     for video_path, label in videos.items():
         dataset = analyze_video(path=video_path, output=label, data=dataset)
     dataset_array = np.array(dataset)
-    np.save("data/training_data.npy", dataset_array)
-
-
-if __name__ == "__main__":
-    create_training_dataset()
+    np.save(save_training_data_path + "/fsp_training_data.npy", dataset_array)
