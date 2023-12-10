@@ -36,6 +36,8 @@ def check_if_stop_video(
 
 
 def preprocess(all_features: np.array, landmarks_list: list) -> np.array:
+    if len(landmarks_list) == 0:
+        return all_features
     landmarks_array = np.array(landmarks_list[:][:])  # take only feet keypoints
     frame_features = landmarks_array[:, 1:].flatten()  # Exclude keypoint_id
     all_features = np.concatenate([all_features, frame_features])
