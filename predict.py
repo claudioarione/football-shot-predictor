@@ -53,9 +53,9 @@ def analyze_video(path: str, att_classification_model: XGBoostClassifier, gk_cla
 
                 # Predict the direction of the goalkeeper's dive
                 goalkeeper_data = goalkeeper_features[-33 * 5:]
-                gk_lcr_probabilities = gk_classification_model.predict_class(goalkeeper_data)[0]
-                gk_lcr_probabilities = [format(num * 100, '.1f') for num in gk_lcr_probabilities]
-                frame = draw_dive_prediction(frame, gk_lcr_probabilities)
+                gk_lr_probabilities = gk_classification_model.predict_class(goalkeeper_data)[0]
+                gk_lr_probabilities = [format(num * 100, '.1f') for num in gk_lr_probabilities]
+                frame = draw_dive_prediction(frame, gk_lr_probabilities, previous_goalkeeper)
 
                 stop_time = 4000
                 predict = False
@@ -109,11 +109,11 @@ def show_predictions(video_paths: list, training_path: str):
     gk_data_path = training_path + "/gk_training_data.npy"
 
     # Create and train model for attacker
-    att_classification_model = XGBoostClassifier(att_data_path)
+    att_classification_model = XGBoostClassifier(att_data_path, 3)
     att_classification_model.train_model()
 
     # Create and train model for goalkeeper
-    gk_classification_model = XGBoostClassifier(gk_data_path)
+    gk_classification_model = XGBoostClassifier(gk_data_path, 2)
     gk_classification_model.train_model()
 
     # Secondly, open videos one by one and predict the outcome

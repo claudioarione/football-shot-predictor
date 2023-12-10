@@ -115,8 +115,21 @@ def draw_shot_predictions(image, lcr_probabilities):
     result_image = draw_shaded_rectangles_in_goal(image, left_post, right_post, lcr_probabilities)
     return result_image
 
-def draw_dive_prediction(image, lcr_probabilities):
-    cv2.putText(image, "AAAA", (20, 20), cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 1, (0, 0, 0))
+
+def draw_dive_prediction(image, lr_probabilities, gk_box, length=45, thickness=3,
+                         text_padding=10, arrow_color=(255, 255, 255)):
+    assert len(lr_probabilities) == 2
+
+    x, y, w, h = gk_box
+    y_arrows = y + h // 2
+    cv2.arrowedLine(image, (x, y_arrows), (x - length, y_arrows), arrow_color, thickness)
+    cv2.arrowedLine(image, (x + w, y_arrows), (x + w + length, y_arrows), arrow_color, thickness)
+
+    cv2.putText(image, str(lr_probabilities[0]) + "%", (x - int(length / 1.25), y_arrows - text_padding),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, arrow_color)
+    cv2.putText(image, str(lr_probabilities[1]) + "%", (x + w + int(length / 3.5), y_arrows - text_padding),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, arrow_color)
+
     return image
 
 
