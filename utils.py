@@ -4,7 +4,7 @@ import cv2
 
 
 def check_if_stop_video(
-        ball_box, image, attacker_detector: PoseDetector, threshold_in_pixels=25
+    ball_box, image, attacker_detector: PoseDetector, threshold_in_pixels=35
 ):
     """
     States if the video must be stopped, i.e., if the foot of the attacker
@@ -53,7 +53,7 @@ def process_player(frame, player, detector: PoseDetector) -> None:
     if not player:
         return
     x, y, w, h = player
-    player_image = frame[y: y + h, x: x + w]
+    player_image = frame[y : y + h, x : x + w]
     detector.find_pose(player_image)
 
 
@@ -71,7 +71,7 @@ def euclidean_distance(center1, center2):
 
 
 def find_similar_boxes(
-        current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
+    current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
 ):
     if not previous_attacker and not previous_goalkeeper:
         return current_frame_boxes

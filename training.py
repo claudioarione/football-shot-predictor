@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 
-def analyze_video(path: str, output: int, width_rel=20, height_rel=15) -> tuple:
+def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
     model = YOLO()
 
     video = cv2.VideoCapture(path)
@@ -53,7 +53,9 @@ def analyze_video(path: str, output: int, width_rel=20, height_rel=15) -> tuple:
         landmarks_attacker_list = attacker_detector.get_position(current_attacker)
         landmarks_goalkeeper_list = attacker_detector.get_position(current_goalkeeper)
         attacker_features = utils.preprocess(attacker_features, landmarks_attacker_list)
-        goalkeeper_features = utils.preprocess(goalkeeper_features, landmarks_goalkeeper_list)
+        goalkeeper_features = utils.preprocess(
+            goalkeeper_features, landmarks_goalkeeper_list
+        )
 
         # Draw boundaries for attacker and goalkeeper
         utils.draw_object_bounding_box(frame, current_attacker)
@@ -61,7 +63,9 @@ def analyze_video(path: str, output: int, width_rel=20, height_rel=15) -> tuple:
 
         cv2.imshow("Football Shot Predictor", frame)
 
-        stop = utils.check_if_stop_video(soccer_ball_box, current_attacker, attacker_detector)
+        stop = utils.check_if_stop_video(
+            soccer_ball_box, current_attacker, attacker_detector
+        )
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
@@ -70,14 +74,22 @@ def analyze_video(path: str, output: int, width_rel=20, height_rel=15) -> tuple:
     cv2.destroyAllWindows()
     att_label, gk_label = output
     # Select 33 keypoints * last 10 frames before kick
-    return np.append(attacker_features[-33 * 10:], att_label), np.append(goalkeeper_features[-33 * 5:], gk_label)
+    return np.append(attacker_features[-33 * 10 :], att_label), np.append(
+        goalkeeper_features[-33 * 5 :], gk_label
+    )
 
 
 # FIXME: this is for training
-def create_training_dataset(training_dataframe: pd.DataFrame, save_training_data_path: str):
+def create_training_dataset(
+    training_dataframe: pd.DataFrame, save_training_data_path: str
+):
     att_dataset, gk_dataset = [], []
-    videos = dict(zip(training_dataframe["link"],
-                      zip(training_dataframe["att_label"], training_dataframe["gk_label"])))
+    videos = dict(
+        zip(
+            training_dataframe["link"],
+            zip(training_dataframe["att_label"], training_dataframe["gk_label"]),
+        )
+    )
     print(videos)
     for video_path, label in videos.items():
         attacker_data, goalkeeper_data = analyze_video(path=video_path, output=label)

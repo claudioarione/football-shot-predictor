@@ -4,12 +4,18 @@ from pose_estimation.yolo_model import YOLO
 from pose_estimation.poseModule import PoseDetector
 from pose_estimation.draw_results import draw_shot_predictions, draw_dive_prediction
 import utils
+
 # Library imports
 import cv2
 
 
-def analyze_video(path: str, att_classification_model: XGBoostClassifier, gk_classification_model: XGBoostClassifier,
-                  width_rel=20, height_rel=15) -> None:
+def analyze_video(
+    path: str,
+    att_classification_model: XGBoostClassifier,
+    gk_classification_model: XGBoostClassifier,
+    width_rel=30,
+    height_rel=22,
+) -> None:
     # Instantiate the YOLO model for object detection
     detection_model = YOLO()
 
@@ -45,17 +51,27 @@ def analyze_video(path: str, att_classification_model: XGBoostClassifier, gk_cla
             stop_time = 100
             if predict:
                 # Predict the direction of the shoot
-                attacker_data = attacker_features[-33 * 10:]
-                att_lcr_probabilities = att_classification_model.predict_class(attacker_data)[0]
+                attacker_data = attacker_features[-33 * 10 :]
+                att_lcr_probabilities = att_classification_model.predict_class(
+                    attacker_data
+                )[0]
                 # Round the results for visualization purposes
-                att_lcr_probabilities = [format(num * 100, '.1f') for num in att_lcr_probabilities]
+                att_lcr_probabilities = [
+                    format(num * 100, ".1f") for num in att_lcr_probabilities
+                ]
                 frame = draw_shot_predictions(frame, att_lcr_probabilities)
 
                 # Predict the direction of the goalkeeper's dive
-                goalkeeper_data = goalkeeper_features[-33 * 5:]
-                gk_lr_probabilities = gk_classification_model.predict_class(goalkeeper_data)[0]
-                gk_lr_probabilities = [format(num * 100, '.1f') for num in gk_lr_probabilities]
-                frame = draw_dive_prediction(frame, gk_lr_probabilities, previous_goalkeeper)
+                goalkeeper_data = goalkeeper_features[-33 * 5 :]
+                gk_lr_probabilities = gk_classification_model.predict_class(
+                    goalkeeper_data
+                )[0]
+                gk_lr_probabilities = [
+                    format(num * 100, ".1f") for num in gk_lr_probabilities
+                ]
+                frame = draw_dive_prediction(
+                    frame, gk_lr_probabilities, previous_goalkeeper
+                )
 
                 stop_time = 4000
                 predict = False
@@ -85,7 +101,9 @@ def analyze_video(path: str, att_classification_model: XGBoostClassifier, gk_cla
         landmarks_attacker_list = attacker_detector.get_position(current_attacker)
         landmarks_goalkeeper_list = goalkeeper_detector.get_position(current_goalkeeper)
         attacker_features = utils.preprocess(attacker_features, landmarks_attacker_list)
-        goalkeeper_features = utils.preprocess(goalkeeper_features, landmarks_goalkeeper_list)
+        goalkeeper_features = utils.preprocess(
+            goalkeeper_features, landmarks_goalkeeper_list
+        )
 
         # Draw boundaries for attacker and goalkeeper
         utils.draw_object_bounding_box(frame, current_attacker)
@@ -93,7 +111,9 @@ def analyze_video(path: str, att_classification_model: XGBoostClassifier, gk_cla
 
         cv2.imshow("Football Shot Predictor", original_image if stop else frame)
 
-        stop = utils.check_if_stop_video(soccer_ball_box, current_attacker, attacker_detector)
+        stop = utils.check_if_stop_video(
+            soccer_ball_box, current_attacker, attacker_detector
+        )
         predict = stop
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -124,6 +144,6 @@ def show_predictions(video_paths: list, training_path: str):
 if __name__ == "__main__":
     # TODO add an argument parser to make users choose if they want to train on a given dataset (whose videos
     #  have to be listed in a file) or to show the prediction on given videos
-    video_paths = ['data/Penalty_Neymar.mp4']
-    training_data_path = 'data/training_data.npy'
+    video_paths = ["data/Penalty_Neymar.mp4"]
+    training_data_path = "data/training_data.npy"
     show_predictions(video_paths, training_data_path)

@@ -1,4 +1,3 @@
+data/penalty2.mp4
 data/Penalty_Neymar.mp4
-data/Penalty_Mata.mp4
-data/Penalty_Lampard.mp4
-data/Penalty_Olic.mp4
+data/penalty1.mp4

@@ -13,10 +13,21 @@ def _compute_line_distance(first_line, second_line):
     return (distance_x + distance_y) // 2
 
 
-def _search_posts(lines, img_width, img_height, acceptability_threshold, horizontal_offset, vertical_offset):
+def _search_posts(
+    lines,
+    img_width,
+    img_height,
+    acceptability_threshold,
+    horizontal_offset,
+    vertical_offset,
+):
     # Identify some acceptability boundaries
-    left_post_x, right_post_x = int(img_width * horizontal_offset), int(img_width * (1 - horizontal_offset))
-    post_y_low, post_y_high = int(img_height * vertical_offset), int(img_height * (1 - vertical_offset))
+    left_post_x, right_post_x = int(img_width * horizontal_offset), int(
+        img_width * (1 - horizontal_offset)
+    )
+    post_y_low, post_y_high = int(img_height * vertical_offset), int(
+        img_height * (1 - vertical_offset)
+    )
     # First estimate the position of the two posts
     estimated_left_post = [left_post_x, post_y_high, left_post_x, post_y_low]
     estimated_right_post = [right_post_x, post_y_high, right_post_x, post_y_low]
@@ -35,8 +46,14 @@ def _search_posts(lines, img_width, img_height, acceptability_threshold, horizon
     return estimated_left_post, estimated_right_post
 
 
-def identify_posts(image, ang_coeff_threshold=10, post_acceptability_threshold=60,
-                   horizontal_offset=0.2, vertical_offset=0.3, draw=True):
+def identify_posts(
+    image,
+    ang_coeff_threshold=10,
+    post_acceptability_threshold=150,
+    horizontal_offset=0.3,
+    vertical_offset=0.3,
+    draw=True,
+):
     # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -47,7 +64,9 @@ def identify_posts(image, ang_coeff_threshold=10, post_acceptability_threshold=6
     edges = cv2.Canny(blurred, 50, 150)
 
     # Use Hough Lines Transform to detect lines
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=100, maxLineGap=10)
+    lines = cv2.HoughLinesP(
+        edges, 1, np.pi / 180, threshold=50, minLineLength=100, maxLineGap=10
+    )
 
     # Keep only long vertical lines, which are posts candidates
     long_vertical_lines = []
@@ -57,10 +76,21 @@ def identify_posts(image, ang_coeff_threshold=10, post_acceptability_threshold=6
             long_vertical_lines.append(line)
 
     # Identify possible left and right post among all the candidates
-    left_post, right_post = _search_posts(long_vertical_lines, image.shape[1], image.shape[0],
-                                          post_acceptability_threshold, horizontal_offset, vertical_offset)
+    left_post, right_post = _search_posts(
+        long_vertical_lines,
+        image.shape[1],
+        image.shape[0],
+        post_acceptability_threshold,
+        horizontal_offset,
+        vertical_offset,
+    )
     # Set the height to the same value for both posts
     y_start, y_end = min(left_post[3], right_post[3]), max(left_post[1], right_post[1])
+    if y_end - y_start < 340:
+        if y_start < 250:
+            y_end = y_start + 340
+        else:
+            y_start = y_end - 340
     left_post[3] = y_start
     right_post[3] = y_start
     left_post[1] = y_end
@@ -68,8 +98,20 @@ def identify_posts(image, ang_coeff_threshold=10, post_acceptability_threshold=6
 
     # If needed, draw posts on the original image
     if draw:
-        cv2.line(image, (left_post[0], left_post[1]), (left_post[2], left_post[3]), (0, 255, 0), 2)
-        cv2.line(image, (right_post[0], right_post[1]), (right_post[2], right_post[3]), (0, 255, 0), 2)
+        cv2.line(
+            image,
+            (left_post[0], left_post[1]),
+            (left_post[2], left_post[3]),
+            (0, 255, 0),
+            2,
+        )
+        cv2.line(
+            image,
+            (right_post[0], right_post[1]),
+            (right_post[2], right_post[3]),
+            (0, 255, 0),
+            2,
+        )
 
     return left_post, right_post
 
@@ -83,9 +125,18 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
 
     # Define boundaries - remember that x1_1 ≈ x2_1 and x1_2 ≈ x2_2
     rect_width = int(abs((x1_2 + x2_2) / 2 - (x1_1 + x2_1) / 2) / 3)
-    left_rect_top_left, left_rect_bottom_right = (x1_1, y_high), (x1_1 + rect_width, y_low)
-    center_rect_top_left, center_rect_bottom_right = (x1_1 + rect_width, y_high), (x1_2 - rect_width, y_low)
-    right_rect_top_left, right_rect_bottom_right = (x1_2 - rect_width, y_high), (x1_2, y_low)
+    left_rect_top_left, left_rect_bottom_right = (x1_1, y_high), (
+        x1_1 + rect_width,
+        y_low,
+    )
+    center_rect_top_left, center_rect_bottom_right = (x1_1 + rect_width, y_high), (
+        x1_2 - rect_width,
+        y_low,
+    )
+    right_rect_top_left, right_rect_bottom_right = (x1_2 - rect_width, y_high), (
+        x1_2,
+        y_low,
+    )
 
     # Define width and height of a percentage of type 0.xx% in the given font - assuming the percentages to be
     # correctly passed
@@ -97,14 +148,48 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
 
     # Shade rectangles in the separate image
     # TODO change opacity with respect to the highest probability
-    cv2.rectangle(shaded_rectangles, left_rect_top_left, left_rect_bottom_right, (255, 0, 0), -1)  # Blue
-    cv2.rectangle(shaded_rectangles, center_rect_top_left, center_rect_bottom_right, (0, 255, 0), -1)  # Green
-    cv2.rectangle(shaded_rectangles, right_rect_top_left, right_rect_bottom_right, (0, 0, 255), -1)  # Red
+    cv2.rectangle(
+        shaded_rectangles, left_rect_top_left, left_rect_bottom_right, (255, 0, 0), -1
+    )  # Blue
+    cv2.rectangle(
+        shaded_rectangles,
+        center_rect_top_left,
+        center_rect_bottom_right,
+        (0, 255, 0),
+        -1,
+    )  # Green
+    cv2.rectangle(
+        shaded_rectangles, right_rect_top_left, right_rect_bottom_right, (0, 0, 255), -1
+    )  # Red
 
     # Add text on the shaded rectangles
-    cv2.putText(image, str(percentages[0]) + "%", left_text_start, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-    cv2.putText(image, str(percentages[1]) + "%", center_text_start, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-    cv2.putText(image, str(percentages[2]) + "%", right_text_start, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(
+        image,
+        str(percentages[0]) + "%",
+        left_text_start,
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        2,
+    )
+    cv2.putText(
+        image,
+        str(percentages[1]) + "%",
+        center_text_start,
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        2,
+    )
+    cv2.putText(
+        image,
+        str(percentages[2]) + "%",
+        right_text_start,
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        2,
+    )
 
     # Add the shaded rectangles to the original image
     return cv2.addWeighted(image, 1, shaded_rectangles, 0.5, 0)
@@ -112,34 +197,59 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
 
 def draw_shot_predictions(image, lcr_probabilities):
     left_post, right_post = identify_posts(image, draw=False)
-    result_image = draw_shaded_rectangles_in_goal(image, left_post, right_post, lcr_probabilities)
+    result_image = draw_shaded_rectangles_in_goal(
+        image, left_post, right_post, lcr_probabilities
+    )
     return result_image
 
 
-def draw_dive_prediction(image, lr_probabilities, gk_box, length=45, thickness=3,
-                         text_padding=10, arrow_color=(255, 255, 255)):
+def draw_dive_prediction(
+    image,
+    lr_probabilities,
+    gk_box,
+    length=45,
+    thickness=3,
+    text_padding=10,
+    arrow_color=(255, 255, 255),
+):
     assert len(lr_probabilities) == 2
 
     x, y, w, h = gk_box
     y_arrows = y + h // 2
-    cv2.arrowedLine(image, (x, y_arrows), (x - length, y_arrows), arrow_color, thickness)
-    cv2.arrowedLine(image, (x + w, y_arrows), (x + w + length, y_arrows), arrow_color, thickness)
+    cv2.arrowedLine(
+        image, (x, y_arrows), (x - length, y_arrows), arrow_color, thickness
+    )
+    cv2.arrowedLine(
+        image, (x + w, y_arrows), (x + w + length, y_arrows), arrow_color, thickness
+    )
 
-    cv2.putText(image, str(lr_probabilities[0]) + "%", (x - int(length / 1.25), y_arrows - text_padding),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, arrow_color)
-    cv2.putText(image, str(lr_probabilities[1]) + "%", (x + w + int(length / 3.5), y_arrows - text_padding),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, arrow_color)
+    cv2.putText(
+        image,
+        str(lr_probabilities[0]) + "%",
+        (x - int(length / 1.25), y_arrows - text_padding),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        arrow_color,
+    )
+    cv2.putText(
+        image,
+        str(lr_probabilities[1]) + "%",
+        (x + w + int(length / 3.5), y_arrows - text_padding),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        arrow_color,
+    )
 
     return image
 
 
 if __name__ == "__main__":
-    image = cv2.imread('../data/ball_image.png')
+    image = cv2.imread("../data/ball_image.png")
     image = cv2.resize(image, (32 * 20, 32 * 15))
 
     result_image = draw_shot_predictions(image, [0.4, 0.2, 0.2])
 
     # Display the result
-    cv2.imshow('Result', result_image)
+    cv2.imshow("Result", result_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

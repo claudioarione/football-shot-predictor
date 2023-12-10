@@ -72,6 +72,8 @@ class PoseDetector:
         :return: A list, in which each element contains the landmark id and x and y coordinates.
         """
         landmarks_list = []
+        if image_box is None:
+            return []
         if self.results.pose_landmarks:
             for position, landmark in enumerate(self.results.pose_landmarks.landmark):
                 x, y, w, h = image_box
