@@ -4,15 +4,16 @@ import numpy as np
 
 class XGBoostClassifier:
 
-    def __init__(self, np_array_path):
+    def __init__(self, np_array_path, num_classes):
         data = np.load(np_array_path)
         self.X_train = data[:, :-1]
         self.y_train = data[:, -1]
+        self.num_classes = num_classes
 
     def train_model(self):
         xgbc = XGBClassifier(
             objective='multi:softprob',  # Use 'multi:softprob' for multiclass problems
-            num_class=3,  # Number of classes in the classification problem
+            num_class=self.num_classes,  # Number of classes in the classification problem
             eval_metric='mlogloss'  # Use 'mlogloss' for multiclass logloss
         )
 
