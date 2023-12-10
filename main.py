@@ -1,45 +1,40 @@
-import cv2
-import cvzone
-import cvzone.ColorModule as cm
+import sys, pandas as pd
+import training, predict
+from argparse import ArgumentParser
 
-def load_video():
-    # Load the video
-    cap = cv2.VideoCapture('data/Penalty_Neymar.mp4')
-    hsv_vals = {
-            "hmin": 0, "smin": 24, "vmin": 200, "hmax": 50, "smax": 61, "vmax": 255
-        }
-    color_finder = cm.ColorFinder(False)
-    while True:
-        # Read the image
-        success, frame = cap.read()
-        # if not success:
-        #     break
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        prog="Football Shot Predictor",
+        description="Predicts the expected direction of the shot and of the goalkeeper",
+        epilog="Visit our GitHub repository for further information"
+    )
 
-        # frame = cv2.imread("data/ball_image.png")
-        # Resize the image putting the max size to 800 - TODO remove?
-        frame = cv2.resize(frame, (0, 0), None, 0.5, 0.5)
+    parser.add_argument('-t', '--train', action='store_true',
+                        help='Train model on specified list of videos or on default one')
+    parser.add_argument('-p', '--predict', action='store_true',
+                        help='Predict shot outcome on specified list of videos or on default one')
+    parser.add_argument('-f', '--filepath', action='store',
+                        help='Path of the file containing the list of videos')
+    parser.add_argument('--training_data_load', action='store',
+                        help='Path of the .npy file containing the data obtained by a previous training that should be'
+                             'used in prediction')
+    parser.add_argument('--training_data_save', action='store',
+                        help='Path where to save the newly created training set')
 
-        # Find the ball inside the screen
-        # frame_color, mask = color_finder.update(frame, {
-        #     "hmin": 31, "smin": 0, "vmin": 200, "hmax": 43, "smax": 61, "vmax": 255
-        # })
-        frame_color, mask = color_finder.update(frame, hsv_vals)  # FIXME: find better values because for the video are not good
-        # frame_color, mask = color_finder.update(frame, "red")  # to find the right hsv_vals
-        # Find ball location
-        # frame_contours, contours = cvzone.findContours(frame, mask, minArea=250)
-        # Show the ball frame
-        # ball_frame = cv2.resize(ball_frame, (0, 0), None, 0.7, 0.7)
-        # cv2.imshow('Ball frame', ball_frame)
+    args = parser.parse_args()
 
-        cv2.imshow('Frame', frame)
-        cv2.imshow('frameColor', frame_color)
-
-        if cv2.waitKey(100) & 0xFF == ord('q'):  # FIXME: quit
-            break
-
-    # cap.release()
-    cv2.destroyAllWindows()
-
-
-if __name__ == '__main__':
-    load_video()
+    if args.train and args.predict:
+        sys.exit('Cannot pass both train and predict arguments')
+    elif args.train:
+        # Train model
+        videos_link_file = args.filepath or 'data/training/videos_link_list.csv'
+        save_training_data_path = args.training_data_save or 'data/training_data.npy'
+        training_data = pd.read_csv(videos_link_file, dtype={0: str, 1: int})
+        training.create_training_dataset(training_data, save_training_data_path)
+    else:
+        # Predict outcome of the shot
+        videos_link_file = args.filepath or 'data/predict/videos_link_list.txt'
+        training_data_path = args.training_data_load or 'data/training_data.npy'
+        with open(videos_link_file, 'r') as videos_file:
+            videos = [video.strip() for video in videos_file.readlines()]
+        predict.show_predictions(videos, training_data_path)
