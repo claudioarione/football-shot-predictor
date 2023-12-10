@@ -2,13 +2,14 @@
 from pose_estimation.train_classification_model import XGBoostClassifier
 from pose_estimation.yolo_model import YOLO
 from pose_estimation.poseModule import PoseDetector
-from pose_estimation.draw_results import draw_shot_predictions
+from pose_estimation.draw_results import draw_shot_predictions, draw_dive_prediction
 import utils
 # Library imports
 import cv2
 
 
-def analyze_video(path: str, classification_model: XGBoostClassifier, width_rel=20, height_rel=15) -> None:
+def analyze_video(path: str, att_classification_model: XGBoostClassifier, gk_classification_model: XGBoostClassifier,
+                  width_rel=20, height_rel=15) -> None:
     # Instantiate the YOLO model for object detection
     detection_model = YOLO()
 
@@ -25,6 +26,7 @@ def analyze_video(path: str, classification_model: XGBoostClassifier, width_rel=
     # Define utility variables
     previous_attacker, previous_goalkeeper = None, None
     attacker_features = []
+    goalkeeper_features = []
     # Define a variable saying if a stop is needed and another if the prediction has to be computed
     stop = False
     predict = False
@@ -44,15 +46,21 @@ def analyze_video(path: str, classification_model: XGBoostClassifier, width_rel=
             if predict:
                 # Predict the direction of the shoot
                 attacker_data = attacker_features[-33 * 10:]
-                lcr_probabilities = classification_model.predict_class(attacker_data)[0]
+                att_lcr_probabilities = att_classification_model.predict_class(attacker_data)[0]
                 # Round the results for visualization purposes
-                lcr_probabilities = [format(num * 100, '.1f') for num in lcr_probabilities]
-                frame = draw_shot_predictions(frame, lcr_probabilities)
+                att_lcr_probabilities = [format(num * 100, '.1f') for num in att_lcr_probabilities]
+                frame = draw_shot_predictions(frame, att_lcr_probabilities)
+
+                # Predict the direction of the goalkeeper's dive
+                goalkeeper_data = goalkeeper_features[-33 * 5:]
+                gk_lcr_probabilities = gk_classification_model.predict_class(goalkeeper_data)[0]
+                gk_lcr_probabilities = [format(num * 100, '.1f') for num in gk_lcr_probabilities]
+                frame = draw_dive_prediction(frame, gk_lcr_probabilities)
 
                 stop_time = 4000
                 predict = False
 
-            cv2.imshow("Image", frame)
+            cv2.imshow("Football Shot Predictor", frame)
             cv2.waitKey(stop_time)
             continue
 
@@ -73,15 +81,17 @@ def analyze_video(path: str, classification_model: XGBoostClassifier, width_rel=
 
         # Process players (pose estimation)
         utils.process_player(frame, current_attacker, attacker_detector)
-        landmarks_attacker_list = attacker_detector.get_position(current_attacker)
-        attacker_features = utils.preprocess(attacker_features, landmarks_attacker_list)
         utils.process_player(frame, current_goalkeeper, goalkeeper_detector)
+        landmarks_attacker_list = attacker_detector.get_position(current_attacker)
+        landmarks_goalkeeper_list = goalkeeper_detector.get_position(current_goalkeeper)
+        attacker_features = utils.preprocess(attacker_features, landmarks_attacker_list)
+        goalkeeper_features = utils.preprocess(goalkeeper_features, landmarks_goalkeeper_list)
 
         # Draw boundaries for attacker and goalkeeper
         utils.draw_object_bounding_box(frame, current_attacker)
         utils.draw_object_bounding_box(frame, current_goalkeeper)
 
-        cv2.imshow("Image", original_image if stop else frame)
+        cv2.imshow("Football Shot Predictor", original_image if stop else frame)
 
         stop = utils.check_if_stop_video(soccer_ball_box, current_attacker, attacker_detector)
         predict = stop
@@ -95,12 +105,20 @@ def analyze_video(path: str, classification_model: XGBoostClassifier, width_rel=
 
 def show_predictions(video_paths: list, training_path: str):
     # First, train the classification model which will be used later
-    classification_model = XGBoostClassifier(training_path)
-    classification_model.train_model()
+    att_data_path = training_path + "/att_training_data.npy"
+    gk_data_path = training_path + "/gk_training_data.npy"
+
+    # Create and train model for attacker
+    att_classification_model = XGBoostClassifier(att_data_path)
+    att_classification_model.train_model()
+
+    # Create and train model for goalkeeper
+    gk_classification_model = XGBoostClassifier(gk_data_path)
+    gk_classification_model.train_model()
 
     # Secondly, open videos one by one and predict the outcome
     for path in video_paths:
-        analyze_video(path, classification_model)
+        analyze_video(path, att_classification_model, gk_classification_model)
 
 
 if __name__ == "__main__":
