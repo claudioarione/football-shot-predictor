@@ -8,7 +8,6 @@ class PoseDetector:
     A class to detect human poses in images or videos using MediaPipe.
     """
 
-    # TODO: analyze better the params of Pose class
     def __init__(
         self,
         static_image_mode=False,
@@ -80,38 +79,3 @@ class PoseDetector:
                 cx, cy = int(x + landmark.x * w), int(y + landmark.y * h)
                 landmarks_list.append([position, cx, cy])
         return landmarks_list
-
-
-def test():
-    # global variables
-    # pose_estimator = []
-    # pose_estimator_dim = []
-    # # For each object detected
-    # # WHICH POSE ESTIMATOR TO USE.
-    # selected_pose_idx = 0
-
-    cap = cv2.VideoCapture("../data/Penalty_Neymar.mp4")
-    previous_time = 0
-    detector = PoseDetector()
-    while True:  # TODO: maybe is better cap.isOpened() and cap.release()
-        success, img = cap.read()
-        if not success:
-            break
-        img = cv2.resize(img, (0, 0), None, 0.7, 0.7)
-        img = detector.find_pose(img)
-        landmarks_list = detector.get_position(img)
-        print(landmarks_list)  # debug
-        # landmarks_list = detector.get_position(img, draw=False)
-        # cv2.circle(img, (landmarks_list[32][1], landmarks_list[32][2]), 20, (0, 0, 255), cv2.FILLED)
-        current_time = time.time()
-        fps = 1 / (current_time - previous_time)
-        previous_time = current_time
-        cv2.putText(
-            img, str(int(fps)), (70, 50), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 3
-        )
-        cv2.imshow("Image", img)
-        cv2.waitKey(int(fps) + 1)
-
-
-if __name__ == "__main__":
-    test()

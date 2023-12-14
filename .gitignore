@@ -161,4 +161,3 @@ cython_debug/
 .DS_Store
 yolov8n.pt
 yolov8m-pose.pt
-*.npy

@@ -11,8 +11,7 @@ The program supports two main functionalities:
 import pandas as pd
 import sys
 from argparse import ArgumentParser
-import predict
-import training
+from core import predict, training
 
 if __name__ == "__main__":
     parser = ArgumentParser(
