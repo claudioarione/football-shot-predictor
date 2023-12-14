@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from utils import utils
+from utils.utils import draw_text_with_background
 
 
 def _compute_line_distance(first_line, second_line):
@@ -182,7 +182,7 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
     ]
 
     for text_start, percentage in text_details:
-        utils.draw_text_with_background(
+        draw_text_with_background(
             image,
             f"{percentage}%",
             text_start,
@@ -191,15 +191,6 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
             thickness=2,
             color=(255, 0, 0),
         )
-        # cv2.putText(
-        #     image,
-        #     f"{percentage}%",  # Format to one decimal place
-        #     text_start,
-        #     cv2.FONT_HERSHEY_SIMPLEX,
-        #     1,
-        #     (255, 255, 255),
-        #     2,
-        # )
 
     return image
 
@@ -220,7 +211,7 @@ def draw_dive_prediction(
     thickness_arrow=6,
     thickness_text=2,
     text_padding=12,
-    arrow_color=(255, 0, 0),
+    arrow_color=(0, 0, 255),
 ):
     assert len(lr_probabilities) == 2
 
@@ -236,7 +227,7 @@ def draw_dive_prediction(
         arrow_color,
         thickness_arrow,
     )
-    utils.draw_text_with_background(
+    draw_text_with_background(
         image,
         f"{lr_probabilities[0]}%",
         (x - int(length / 1.25), y_arrows - text_padding),
@@ -246,10 +237,10 @@ def draw_dive_prediction(
         thickness_text,
     )
 
-    utils.draw_text_with_background(
+    draw_text_with_background(
         image,
         f"{lr_probabilities[1]}%",
-        (x + w + int(length / 5), y_arrows - text_padding),
+        (x + w + int(length / 7), y_arrows - text_padding),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.75,
         arrow_color,

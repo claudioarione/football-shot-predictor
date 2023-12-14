@@ -34,7 +34,7 @@ def analyze_video(
     fps = video.get(cv2.CAP_PROP_FPS)
     size_factor = 32
     size = (size_factor * width_rel, size_factor * height_rel)
-
+    slow_motion_part = int(2.5 * fps)
     # Define the pose detectors for attacker and goalkeeper
     attacker_detector, goalkeeper_detector = PoseDetector(), PoseDetector()
 
@@ -45,7 +45,6 @@ def analyze_video(
     # Define a variable saying if a stop is needed and another if the prediction has to be computed
     stop = False
     predict = False
-    video_writer = None
     # Create a VideoWriter object to save the video
     video_writer = None
     if save_video_path is not None:
@@ -75,6 +74,9 @@ def analyze_video(
                     format(num * 100, ".1f") for num in att_lcr_probabilities
                 ]
                 frame = draw_shot_predictions(frame, att_lcr_probabilities)
+                for _ in range(slow_motion_part):
+                    if video_writer is not None:
+                        video_writer.write(frame)
                 cv2.imshow("Football Shot Predictor", frame)
                 cv2.waitKey(2500)
 
@@ -92,6 +94,9 @@ def analyze_video(
                 frame = draw_dive_prediction(
                     frame, gk_lr_probabilities, previous_goalkeeper
                 )
+                for _ in range(slow_motion_part):
+                    if video_writer is not None:
+                        video_writer.write(frame)
 
                 stop_time = 2500
                 predict = False
@@ -173,4 +178,5 @@ def show_predictions(video_paths: list, training_path: str):
             path,
             att_classification_model,
             gk_classification_model,
+            # save_video_path=path[:-4] + "_predicted.mp4",
         )
