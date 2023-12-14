@@ -1,5 +1,5 @@
 from pose_estimation.yolo_model import YOLO
-from pose_estimation.poseModule import PoseDetector
+from pose_estimation.pose_module import PoseDetector
 import utils
 import cv2
 import numpy as np

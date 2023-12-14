@@ -1,6 +1,6 @@
 from pose_estimation.train_classification_model import XGBoostClassifier
 from pose_estimation.yolo_model import YOLO
-from pose_estimation.poseModule import PoseDetector
+from pose_estimation.pose_module import PoseDetector
 from pose_estimation.draw_results import draw_shot_predictions, draw_dive_prediction
 import utils
 

@@ -1,4 +1,4 @@
-from pose_estimation.poseModule import PoseDetector
+from pose_estimation.pose_module import PoseDetector
 import numpy as np
 import cv2
 
