@@ -169,7 +169,7 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
         left_text_start,
         cv2.FONT_HERSHEY_SIMPLEX,
         1,
-        (0, 0, 0),
+        (255, 255, 255),
         2,
     )
     cv2.putText(
@@ -178,7 +178,7 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
         center_text_start,
         cv2.FONT_HERSHEY_SIMPLEX,
         1,
-        (0, 0, 0),
+        (255, 255, 255),
         2,
     )
     cv2.putText(
@@ -187,7 +187,7 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
         right_text_start,
         cv2.FONT_HERSHEY_SIMPLEX,
         1,
-        (0, 0, 0),
+        (255, 255, 255),
         2,
     )
 

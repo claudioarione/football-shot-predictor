@@ -7,6 +7,18 @@ import pandas as pd
 
 
 def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
+    """
+    Analyzes a video to extract features relevant for football shot prediction.
+
+    This function processes each frame of the video, using object detection and pose estimation techniques, to identify
+    and analyze the movements of the attacker and goalkeeper. It extracts features based on their poses and movements.
+
+    :param path: The file path of the video to be analyzed.
+    :param output: A tuple containing labels for the attacker and the goalkeeper.
+    :param width_rel: Relative width for resizing video frames for processing (default: 30).
+    :param height_rel: Relative height for resizing video frames for processing (default: 22).
+    :return: A tuple containing arrays of extracted features for the attacker and goalkeeper.
+    """
     model = YOLO()
 
     video = cv2.VideoCapture(path)
@@ -83,6 +95,20 @@ def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
 def create_training_dataset(
     training_dataframe: pd.DataFrame, save_training_data_path: str
 ):
+    """
+    Creates a training dataset from a DataFrame containing video links and labels.
+
+    This function iterates over each video link in the DataFrame, calling `analyze_video` to process each video. It
+    compiles the resulting feature arrays into two datasets: one for attackers and one for goalkeepers. These datasets
+    are then saved as numpy arrays.
+
+    Note:
+    - The DataFrame must contain columns 'link', 'att_label', and 'gk_label'.
+    - Saved datasets are named 'att_training_data.npy' and 'gk_training_data.npy'.
+
+    :param training_dataframe: A DataFrame containing video links and corresponding labels.
+    :param save_training_data_path: The directory path where the training datasets will be saved.
+    """
     att_dataset, gk_dataset = [], []
     videos = dict(
         zip(

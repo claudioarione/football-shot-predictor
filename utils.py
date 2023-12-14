@@ -156,7 +156,7 @@ def draw_object_bounding_box(image_to_process, box):
     start_point = (x, y)
     end_point = (x + width, y + height)
     color = (0, 255, 0)
-    thickness = 1
+    thickness = 2
     image_with_box = cv2.rectangle(
         image_to_process, start_point, end_point, color, thickness
     )

@@ -1,11 +1,9 @@
-# Local imports
 from pose_estimation.train_classification_model import XGBoostClassifier
 from pose_estimation.yolo_model import YOLO
 from pose_estimation.poseModule import PoseDetector
 from pose_estimation.draw_results import draw_shot_predictions, draw_dive_prediction
 import utils
 
-# Library imports
 import cv2
 
 
@@ -16,13 +14,23 @@ def analyze_video(
     width_rel=30,
     height_rel=22,
 ) -> None:
-    # Instantiate the YOLO model for object detection
+    """
+    Analyzes a football match video to predict the direction of shots and goalkeeper dives.
+
+    This function processes each frame of the video using the YOLO model for object detection and PoseDetector for pose estimation.
+    It identifies the attacker and goalkeeper, tracks their movements, and uses pre-trained classification models to predict the
+    outcome of shots and dives.
+
+    :param path: The file path of the video to be analyzed.
+    :param att_classification_model: The pre-trained XGBoost classifier model for predicting the attacker's shot direction.
+    :param gk_classification_model: The pre-trained XGBoost classifier model for predicting the goalkeeper's dive direction.
+    :param width_rel: Relative width for resizing video frames for processing. Default is 30.
+    :param height_rel: Relative height for resizing video frames for processing. Default is 22.
+    """
     detection_model = YOLO()
 
-    # Start the video capture
     video = cv2.VideoCapture(path)
 
-    # Define the size of the final, resized video, in order to avoid exceeding resource limits
     size_factor = 32
     size = (size_factor * width_rel, size_factor * height_rel)
 
@@ -48,7 +56,7 @@ def analyze_video(
 
         if stop:
             # The bounding boxes and the pose estimators does not have to be drawn
-            stop_time = 100
+            stop_time = 50
             if predict:
                 # Predict the direction of the shoot
                 attacker_data = attacker_features[-33 * 10 :]
@@ -124,15 +132,22 @@ def analyze_video(
 
 
 def show_predictions(video_paths: list, training_path: str):
-    # First, train the classification model which will be used later
+    """
+    Processes a list of video paths to predict football shot outcomes.
+
+    For each video in the provided list, this function uses the `analyze_video` function to predict the outcome of shots.
+    It involves training XGBoost classification models using the provided training data, and then applying these models to
+    analyze the videos.
+
+    :param video_paths: A list of file paths for the videos to be analyzed.
+    :param training_path: The file path where the training data for the models is stored.
+    """
     att_data_path = training_path + "/att_training_data.npy"
     gk_data_path = training_path + "/gk_training_data.npy"
 
-    # Create and train model for attacker
     att_classification_model = XGBoostClassifier(att_data_path, 3)
     att_classification_model.train_model()
 
-    # Create and train model for goalkeeper
     gk_classification_model = XGBoostClassifier(gk_data_path, 2)
     gk_classification_model.train_model()
 
@@ -142,8 +157,6 @@ def show_predictions(video_paths: list, training_path: str):
 
 
 if __name__ == "__main__":
-    # TODO add an argument parser to make users choose if they want to train on a given dataset (whose videos
-    #  have to be listed in a file) or to show the prediction on given videos
     video_paths = ["data/Penalty_Neymar.mp4"]
     training_data_path = "data/training_data.npy"
     show_predictions(video_paths, training_data_path)
