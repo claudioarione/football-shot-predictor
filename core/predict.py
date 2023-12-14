@@ -11,8 +11,9 @@ def analyze_video(
     path: str,
     att_classification_model: XGBoostClassifier,
     gk_classification_model: XGBoostClassifier,
-    width_rel=30,
-    height_rel=22,
+    width_rel: int = 30,
+    height_rel: int = 22,
+    save_video_path: str = None,
 ) -> None:
     """
     Analyzes a football match video to predict the direction of shots and goalkeeper dives.
@@ -30,7 +31,7 @@ def analyze_video(
     detection_model = YOLO()
 
     video = cv2.VideoCapture(path)
-
+    fps = video.get(cv2.CAP_PROP_FPS)
     size_factor = 32
     size = (size_factor * width_rel, size_factor * height_rel)
 
@@ -44,6 +45,12 @@ def analyze_video(
     # Define a variable saying if a stop is needed and another if the prediction has to be computed
     stop = False
     predict = False
+    video_writer = None
+    # Create a VideoWriter object to save the video
+    video_writer = None
+    if save_video_path is not None:
+        fourcc = cv2.VideoWriter_fourcc(*"MP4V")  # or use 'MP4V' for .mp4 format
+        video_writer = cv2.VideoWriter(save_video_path, fourcc, fps, size)
 
     # Defining loop for catching frames
     while True:
@@ -88,7 +95,8 @@ def analyze_video(
 
                 stop_time = 2500
                 predict = False
-
+            if video_writer is not None:
+                video_writer.write(frame)
             cv2.imshow("Football Shot Predictor", frame)
             cv2.waitKey(stop_time)
             continue
@@ -122,6 +130,8 @@ def analyze_video(
         utils.draw_object_bounding_box(frame, current_attacker)
         utils.draw_object_bounding_box(frame, current_goalkeeper)
 
+        if video_writer is not None:
+            video_writer.write(original_image if stop else frame)
         cv2.imshow("Football Shot Predictor", original_image if stop else frame)
 
         stop = utils.check_if_stop_video(
@@ -131,7 +141,8 @@ def analyze_video(
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
-
+    if video_writer is not None:
+        video_writer.release()
     video.release()
     cv2.destroyAllWindows()
 
@@ -158,4 +169,8 @@ def show_predictions(video_paths: list, training_path: str):
 
     # Secondly, open videos one by one and predict the outcome
     for path in video_paths:
-        analyze_video(path, att_classification_model, gk_classification_model)
+        analyze_video(
+            path,
+            att_classification_model,
+            gk_classification_model,
+        )
