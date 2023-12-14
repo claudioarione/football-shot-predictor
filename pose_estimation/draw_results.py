@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import utils
 
 
 def _compute_line_distance(first_line, second_line):
@@ -120,10 +121,7 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
     x1_1, y_high, x2_1, y_low = left_post
     x1_2, _, x2_2, _ = right_post
 
-    # Create an empty image for shaded rectangles
-    shaded_rectangles = np.zeros_like(image)
-
-    # Define boundaries - remember that x1_1 ≈ x2_1 and x1_2 ≈ x2_2
+    # Define boundaries
     rect_width = int(abs((x1_2 + x2_2) / 2 - (x1_1 + x2_1) / 2) / 3)
     left_rect_top_left, left_rect_bottom_right = (x1_1, y_high), (
         x1_1 + rect_width,
@@ -138,61 +136,72 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
         y_low,
     )
 
-    # Define width and height of a percentage of type 0.xx% in the given font - assuming the percentages to be
-    # correctly passed
+    # Define positions for text
     text_offset_x, text_offset_y = rect_width // 3, (y_high - y_low) // 4
-
     left_text_start = (x1_1 + text_offset_x, y_low + text_offset_y)
     center_text_start = (x1_1 + rect_width + text_offset_x, y_low + text_offset_y)
     right_text_start = (x1_2 - rect_width + text_offset_x, y_low + text_offset_y)
 
-    # Shade rectangles in the separate image
-    # TODO change opacity with respect to the highest probability
-    cv2.rectangle(
-        shaded_rectangles, left_rect_top_left, left_rect_bottom_right, (255, 0, 0), -1
-    )  # Blue
-    cv2.rectangle(
-        shaded_rectangles,
-        center_rect_top_left,
-        center_rect_bottom_right,
-        (0, 255, 0),
-        -1,
-    )  # Green
-    cv2.rectangle(
-        shaded_rectangles, right_rect_top_left, right_rect_bottom_right, (0, 0, 255), -1
-    )  # Red
+    # Drawing and blending each rectangle individually
+    rectangle_details = [
+        (
+            left_rect_top_left,
+            left_rect_bottom_right,
+            (255, 0, 0),
+            percentages[0],
+        ),  # Blue
+        (
+            center_rect_top_left,
+            center_rect_bottom_right,
+            (0, 255, 0),
+            percentages[1],
+        ),  # Green
+        (
+            right_rect_top_left,
+            right_rect_bottom_right,
+            (0, 0, 255),
+            percentages[2],
+        ),  # Red
+    ]
 
-    # Add text on the shaded rectangles
-    cv2.putText(
-        image,
-        str(percentages[0]) + "%",
-        left_text_start,
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (255, 255, 255),
-        2,
-    )
-    cv2.putText(
-        image,
-        str(percentages[1]) + "%",
-        center_text_start,
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (255, 255, 255),
-        2,
-    )
-    cv2.putText(
-        image,
-        str(percentages[2]) + "%",
-        right_text_start,
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (255, 255, 255),
-        2,
-    )
+    for top_left, bottom_right, color, percentage in rectangle_details:
+        beta = max(float(percentage) / 100, 0.15)
 
-    # Add the shaded rectangles to the original image
-    return cv2.addWeighted(image, 1, shaded_rectangles, 0.5, 0)
+        # beta = float(percentage) / 100
+        print("beta", beta)
+        # print("beta2", beta2)
+        shaded_rectangle = np.zeros_like(image)
+        cv2.rectangle(shaded_rectangle, top_left, bottom_right, color, -1)
+        image = cv2.addWeighted(image, 1, shaded_rectangle, beta, 0)
+
+    # Add text on the image
+    text_details = [
+        (left_text_start, percentages[0]),
+        (center_text_start, percentages[1]),
+        (right_text_start, percentages[2]),
+    ]
+
+    for text_start, percentage in text_details:
+        utils.draw_text_with_background(
+            image,
+            f"{percentage}%",
+            text_start,
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            thickness=2,
+            color=(255, 0, 0),
+        )
+        # cv2.putText(
+        #     image,
+        #     f"{percentage}%",  # Format to one decimal place
+        #     text_start,
+        #     cv2.FONT_HERSHEY_SIMPLEX,
+        #     1,
+        #     (255, 255, 255),
+        #     2,
+        # )
+
+    return image
 
 
 def draw_shot_predictions(image, lcr_probabilities):
@@ -207,49 +216,44 @@ def draw_dive_prediction(
     image,
     lr_probabilities,
     gk_box,
-    length=45,
-    thickness=3,
-    text_padding=10,
-    arrow_color=(255, 255, 255),
+    length=100,
+    thickness_arrow=6,
+    thickness_text=2,
+    text_padding=12,
+    arrow_color=(255, 0, 0),
 ):
     assert len(lr_probabilities) == 2
 
     x, y, w, h = gk_box
-    y_arrows = y + h // 2
+    y_arrows = y + h // 5 * 1
     cv2.arrowedLine(
-        image, (x, y_arrows), (x - length, y_arrows), arrow_color, thickness
+        image, (x, y_arrows), (x - length, y_arrows), arrow_color, thickness_arrow
     )
     cv2.arrowedLine(
-        image, (x + w, y_arrows), (x + w + length, y_arrows), arrow_color, thickness
-    )
-
-    cv2.putText(
         image,
-        str(lr_probabilities[0]) + "%",
+        (x + w, y_arrows),
+        (x + w + length, y_arrows),
+        arrow_color,
+        thickness_arrow,
+    )
+    utils.draw_text_with_background(
+        image,
+        f"{lr_probabilities[0]}%",
         (x - int(length / 1.25), y_arrows - text_padding),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
+        0.75,
         arrow_color,
+        thickness_text,
     )
-    cv2.putText(
+
+    utils.draw_text_with_background(
         image,
-        str(lr_probabilities[1]) + "%",
-        (x + w + int(length / 3.5), y_arrows - text_padding),
+        f"{lr_probabilities[1]}%",
+        (x + w + int(length / 5), y_arrows - text_padding),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
+        0.75,
         arrow_color,
+        thickness_text,
     )
 
     return image
-
-
-if __name__ == "__main__":
-    image = cv2.imread("../data/ball_image.png")
-    image = cv2.resize(image, (32 * 20, 32 * 15))
-
-    result_image = draw_shot_predictions(image, [0.4, 0.2, 0.2])
-
-    # Display the result
-    cv2.imshow("Result", result_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()

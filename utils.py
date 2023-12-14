@@ -143,6 +143,28 @@ def non_maxima_suppression(boxes, class_scores):
     return boxes
 
 
+def draw_text_with_background(
+    image,
+    text,
+    position,
+    font,
+    scale,
+    color,
+    thickness=1,
+    bg_color=(255, 255, 255),
+    text_padding=5,
+):
+    text_size, _ = cv2.getTextSize(text, font, scale, thickness)
+    text_width, text_height = text_size
+    lower_left = (position[0] - text_padding, position[1] + text_padding)
+    upper_right = (
+        position[0] + text_width + text_padding,
+        position[1] - text_height - text_padding,
+    )
+    cv2.rectangle(image, lower_left, upper_right, bg_color, -1)
+    cv2.putText(image, text, position, font, scale, color, thickness)
+
+
 def draw_object_bounding_box(image_to_process, box):
     """
     Draws a bounding box around the object in the image.

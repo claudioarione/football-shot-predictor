@@ -68,6 +68,11 @@ def analyze_video(
                     format(num * 100, ".1f") for num in att_lcr_probabilities
                 ]
                 frame = draw_shot_predictions(frame, att_lcr_probabilities)
+                cv2.imshow("Football Shot Predictor", frame)
+                cv2.waitKey(2500)
+
+                # Reset the frame to the original one
+                frame = original_image.copy()
 
                 # Predict the direction of the goalkeeper's dive
                 goalkeeper_data = goalkeeper_features[-33 * 5 :]
@@ -81,7 +86,7 @@ def analyze_video(
                     frame, gk_lr_probabilities, previous_goalkeeper
                 )
 
-                stop_time = 4000
+                stop_time = 2500
                 predict = False
 
             cv2.imshow("Football Shot Predictor", frame)
