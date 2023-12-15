@@ -46,20 +46,12 @@ To run the code and utilize the football shot predictor, follow these steps:
    ```
    followed by the specific **arguments** you want to use.
 #### Arguments explained
-- Use the following flag without additional arguments to train the model using the default video list:
-`-t or --train`
+- **Predict Mode:** Use the `-p or --predict` flag without additional arguments to predict outcomes using the default video list. Since the model has already been trained, you can directly use this option for immediate predictions.
 
-- Use the following flag without additional arguments to predict outcomes using the default video list:
-`-p or --predict`
-
-- Use the following argument with the path to a file containing your custom list of videos for training or prediction:
-`-f or --filepath`
-
-- Provide the path to the folder containing numpy arrays from previous training if you want to use them for prediction:
-`--training_data_load`
-
-- Specify the folder in which to save new training data arrays:
-`--training_data_save`
+- **Train Mode:** Use the `-t or --train` flag without additional arguments to train the model using the default video list. This is useful if you want to re-train or update the model with new data.
+- **Custom File Path:** Use the `-f or --filepath` argument followed by the path to a file containing your custom list of videos. This option is applicable for both training and prediction modes.
+- **Use Pre-Trained Data for Prediction:** Provide the path to the folder containing numpy arrays from previous custom training using `--training_data_load` if you wish to utilize pre-trained data for predictions.
+- **Save New Training Data:** Specify the folder path with `--training_data_save` where you want to save new custom training data arrays, useful for further training or future use.
 
 ## Results
 Our system demonstrates the potential of computer vision in sports analytics, offering novel insights into the dynamics of football penalties.
