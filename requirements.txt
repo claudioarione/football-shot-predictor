@@ -3,3 +3,4 @@ numpy==1.26.1
 opencv-python==4.8.1.78
 mediapipe==0.10.7
 xgboost==2.0.2
+tqdm==4.66.1
