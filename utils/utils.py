@@ -7,44 +7,49 @@ def check_if_stop_video(
     ball_box, image, attacker_detector: PoseDetector, threshold_in_pixels=35
 ):
     """
-    States if the video must be stopped, i.e., if the foot of the attacker
-    is close to impact the ball
-    :param ball_box: coordinates of the area around the ball
-    :param image: the box of the attacker, represented as an array containing, in order, x, y, width and height
-    :param attacker_detector: detector of the attacker
-    :param threshold_in_pixels: defines an acceptability threshold for keypoints' proximity to ball
-    :return: boolean value
+    Determines if the video playback should stop based on the proximity of the attacker's foot to the ball.
+
+    :param ball_box: Bounding box coordinates of the ball (x, y, width, height).
+    :param image: The frame from the video to analyze.
+    :param attacker_detector: An instance of PoseDetector to detect the attacker's pose.
+    :param threshold_in_pixels: Distance threshold in pixels to determine proximity.
+    :return: Boolean indicating whether to stop the video (True if the foot is close to the ball).
     """
     if ball_box is None:
         return False
 
     keypoints = attacker_detector.get_position(image)
-    # Remember that feet keypoints have an id greater or equal than 27
     feet_keypoints = [keypoint for keypoint in keypoints if keypoint[0] >= 27]
 
     for keypoint in feet_keypoints:
         keypoint_center = keypoint[1:]
         ball_center = center_of_box(ball_box)
-        # Check if the keypoint is enough close to the ball
         if euclidean_distance(keypoint_center, ball_center) < threshold_in_pixels:
-            # If so, the video must be stopped
             return True
 
-    # If no keypoint is enough close to the ball, the video should resume normally
     return False
 
 
 def preprocess(all_features: np.array, landmarks_list: list) -> np.array:
+    """
+    Processes and flattens pose landmarks to be concatenated to the features array.
+
+    :param all_features: The array accumulating all features over time.
+    :param landmarks_list: The list of current frame landmarks to process.
+    :return: Updated array of features with the current frame's landmarks appended.
+    """
     if len(landmarks_list) == 0:
         return all_features
-    landmarks_array = np.array(landmarks_list[:][:])  # take only feet keypoints
-    frame_features = landmarks_array[:, 1:].flatten()  # Exclude keypoint_id
+    landmarks_array = np.array(landmarks_list[:][:])
+    frame_features = landmarks_array[:, 1:].flatten()
     all_features = np.concatenate([all_features, frame_features])
     return all_features
 
 
 def process_player(frame, player, detector: PoseDetector) -> None:
     """
+    Processes a single player's image to estimate the pose using the detector.
+
     :param frame: the frame of the video
     :param player: the player to estimate the pose
     :param detector: the mediapipe pose detector
@@ -58,6 +63,8 @@ def process_player(frame, player, detector: PoseDetector) -> None:
 
 def center_of_box(box) -> np.array:
     """
+    Calculates the center point of a given bounding box.
+
     :param box: coordinates of the area around the object
     :return: coordinates of the center of the box
     """
@@ -66,12 +73,28 @@ def center_of_box(box) -> np.array:
 
 
 def euclidean_distance(center1, center2):
+    """
+    Computes the Euclidean distance between two points.
+
+    :param center1: The first point (x, y).
+    :param center2: The second point (x, y).
+    :return: Euclidean distance between the two points.
+    """
     return np.linalg.norm(center1 - center2)
 
 
 def find_similar_boxes(
     current_frame_boxes, previous_attacker, previous_goalkeeper, threshold: int = 40
 ):
+    """
+    Finds boxes in the current frame similar to the previous attacker and goalkeeper positions.
+
+    :param current_frame_boxes: Detected boxes in the current frame.
+    :param previous_attacker: Previous attacker's bounding box.
+    :param previous_goalkeeper: Previous goalkeeper's bounding box.
+    :param threshold: Distance threshold to consider boxes as similar.
+    :return: List of similar boxes found in the current frame.
+    """
     if not previous_attacker and not previous_goalkeeper:
         return current_frame_boxes
 
@@ -137,6 +160,13 @@ def identify_players(boxes, previous_attacker, previous_goalkeeper):
 
 
 def non_maxima_suppression(boxes, class_scores):
+    """
+    Applies non-maxima suppression to filter out overlapping boxes based on their class scores.
+
+    :param boxes: List of detected bounding boxes.
+    :param class_scores: List of scores corresponding to the detected boxes.
+    :return: List of filtered bounding boxes after applying non-maxima suppression.
+    """
     chosen_boxes = cv2.dnn.NMSBoxes(boxes, class_scores, 0.0, 0.4)
     boxes = [boxes[i] for i in chosen_boxes]
     return boxes
@@ -153,6 +183,19 @@ def draw_text_with_background(
     bg_color=(255, 255, 255),
     text_padding=5,
 ):
+    """
+    Draws text on an image with a background rectangle for better visibility.
+
+    :param image: The image to draw on.
+    :param text: The text to be drawn.
+    :param position: The bottom-left corner position of the text.
+    :param font: Font type for the text.
+    :param scale: Font scale for the text size.
+    :param color: Color of the text.
+    :param thickness: Thickness of the text stroke.
+    :param bg_color: Background color for the text.
+    :param text_padding: Padding around the text for the background rectangle.
+    """
     text_size, _ = cv2.getTextSize(text, font, scale, thickness)
     text_width, text_height = text_size
     lower_left = (position[0] - text_padding, position[1] + text_padding)
@@ -204,7 +247,6 @@ def identify_all_objects(outputs, shape, threshold=0):
             class_score = scores[class_index]
 
             if class_index != 0 and class_index != 32:
-                # The identified object is neither a person nor a ball
                 continue
 
             if class_score > threshold:
