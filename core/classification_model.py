@@ -3,7 +3,31 @@ import numpy as np
 
 
 class XGBoostClassifier:
+    """
+    A classifier based on the XGBoost machine learning framework, designed for training and
+    predicting with XGBoost models.
+
+    Attributes:
+        X_train (np.array): Feature set for training the model.
+        y_train (np.array): Labels corresponding to the feature set.
+        num_classes (int): Number of classes to predict.
+        classifier (XGBClassifier): Trained XGBClassifier instance.
+
+    Methods:
+        train_model(): Trains the XGBoost classifier with the provided training data.
+        evaluate_train_accuracy(): Evaluates the accuracy of the trained model on the training data.
+        predict_class(X_sample): Predicts class probabilities for given samples.
+    """
+
     def __init__(self, np_array_path, num_classes, min_samples_bootstrap=10):
+        """
+        Initializes the XGBoost classifier with training data loaded from a NumPy array file and
+        bootstraps additional samples if necessary.
+
+        :param np_array_path: Path to the NumPy array file containing the training data.
+        :param num_classes: Number of classes in the classification problem.
+        :param min_samples_bootstrap: Minimum number of samples required for bootstrapping.
+        """
         data = np.load(np_array_path)
         self.X_train = data[:, :-1]
         self.y_train = data[:, -1]
@@ -22,6 +46,9 @@ class XGBoostClassifier:
                 self.y_train = np.append(self.y_train, self.y_train[index])
 
     def train_model(self):
+        """
+        Trains the XGBoost classifier using the X_train and y_train attributes.
+        """
         xgbc = XGBClassifier(
             objective="multi:softprob",  # Use 'multi:softprob' for multiclass problems
             num_class=self.num_classes,  # Number of classes in the classification problem
@@ -32,6 +59,11 @@ class XGBoostClassifier:
         self.classifier = xgbc
 
     def evaluate_train_accuracy(self):
+        """
+        Evaluates the training accuracy of the classifier.
+
+        :return: Accuracy score as a float.
+        """
         if not hasattr(self, "classifier"):
             print("Cannot evaluate accuracy before training the model")
             return 0
@@ -48,6 +80,12 @@ class XGBoostClassifier:
         return np.mean(self.y_train == predictions_vector)
 
     def predict_class(self, X_sample):
+        """
+        Predicts class probabilities for the given samples using the trained XGBoost classifier.
+
+        :param X_sample: A single sample or an array of samples for which to predict probabilities.
+        :return: An array of predicted class probabilities.
+        """
         if X_sample.ndim == 1:
             X_sample = [X_sample]
         return self.classifier.predict_proba(X_sample)
