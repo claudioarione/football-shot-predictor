@@ -3,6 +3,8 @@
 ## Introduction
 This project leverages advanced computer vision techniques to analyze and predict the direction of football penalty kicks. Utilizing a combination of YOLO for objects detection and MediaPipe (Google) for pose estimation, our system processes video footage to forecast the outcomes of shots and goalkeeper dives.
 
+https://github.com/claudioarione/football-shot-predictor/assets/100593859/95c21445-a00e-4f41-8ec2-e7f0b0d52561
+
 ## The Team
 - [Claudio Arione](https://github.com/claudioarione)
 - [Riccardo Inghilleri](https://github.com/riccardoinghilleri)
