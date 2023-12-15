@@ -1,30 +1,49 @@
 # Football Shot Predictor
-
+[![License: MIT][license-image]][license]
 ## Introduction
-This project leverages advanced computer vision techniques to analyze and predict the direction of football penalty kicks. Utilizing a combination of YOLO for objects detection and MediaPipe for pose estimation, our system processes video footage to forecast the outcomes of shots and goalkeeper dives.
+This project leverages advanced computer vision techniques to analyze and predict the direction of football penalty kicks. Utilizing a combination of YOLO for objects detection and MediaPipe (Google) for pose estimation, our system processes video footage to forecast the outcomes of shots and goalkeeper dives.
+
+## The Team
+- [Claudio Arione](https://github.com/claudioarione)
+- [Riccardo Inghilleri](https://github.com/riccardoinghilleri)
 
 ## Features
-- Advanced objects detection using YOLO
-- Pose estimation with MediaPipe
-- Predictive modeling with XGBoost for shot direction
-- Visual results with intuitive shot and dive predictions
 
-## Requirements
-- Python 3.*
-- Pre-trained YOLO and MediaPipe models
-- XGBoost for classification
-
-## Installation
-1. Clone the repository.
-2. Install dependencies: `pip3 install -r requirements.txt`.
+| Functionality                    | Description                                                                                                                                                                 |
+|:---------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Objects detection using YOLO     | You only look once (YOLO) is a state-of-the-art, real-time object detection system. We used it to detect the boundin boxes for the attacker, goalkeeper and the soccer ball |
+| Pose estimation with Mediapipe   | Mediapipe by Google is the most accurate and efficient technology to perform pose estimation (33 keypoints).                                                                |
+| Predictive modeling with XGBoost | Strategic extraction of pose landmark features precedes the kick, forming the backbone of our dataset                                                                       |
 
 ## Usage
-Run the main application with the following command:
 
-```shell
-python3 main.py --arguments*
-```
-### Arguments explained
+### Requirements
+1. `Python 3.*` 
+   
+   You can check if you have already installed python by opening the terminal \faicon{terminal} and using the following command:
+   ```shell
+   python --version
+   ```
+2. Clone this repository using the following command (or using ssh):
+   ```shell
+   git clone https://github.com/claudioarione/football-shot-predictor
+   ```
+3. Install the needed libraries going to the folder containing the requirements.txt file:
+   ```shell
+   pip3 install -r requirements.txt
+   ```
+
+### Running
+To run the code and utilize the football shot predictor, follow these steps:
+#### Running the code
+1. Open your terminal or command prompt
+2. Navigate to the directory where the **main.py** file is located
+3. To run the program, type:
+   ```shell
+   python3 main.py --arguments*
+   ```
+   followed by the specific **arguments** you want to use.
+#### Arguments explained
 - Use the following flag without additional arguments to train the model using the default video list:
 `-t or --train`
 
@@ -40,21 +59,21 @@ python3 main.py --arguments*
 - Specify the folder in which to save new training data arrays:
 `--training_data_save`
 
-## Detailed Methodology
-For an in-depth explanation of our methodology, including player detection, pose estimation, data preparation, and feature extraction, please refer to our comprehensive report.
-
 ## Results
 Our system demonstrates the potential of computer vision in sports analytics, offering novel insights into the dynamics of football penalties.
 
-## License
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## Contributors
-- [Claudio Arione](https://github.com/claudioarione)
-- [Riccardo Inghilleri](https://github.com/riccardoinghilleri)
-
 ## Acknowledgements
 - Prof. Mathieu Bredif for guidance and support throughout the project.
+
+## Copyright and License
+
+Football Shot Predictor is copyrighted 2023.
+
+Licensed under the **[MIT License][license]**;
+you may not use this software except in compliance with the License.
+
+[license]: https://github.com/claudioarione/football-shot-predictor/blob/master/LICENSE
+[license-image]: https://img.shields.io/badge/License-MIT-blue.svg
 
 ---
 
