@@ -117,7 +117,9 @@ def identify_posts(
     return left_post, right_post
 
 
-def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
+def draw_shaded_rectangles_in_goal(
+    image, left_post, right_post, percentages: list[int]
+):
     x1_1, y_high, x2_1, y_low = left_post
     x1_2, _, x2_2, _ = right_post
 
@@ -142,37 +144,46 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
     center_text_start = (x1_1 + rect_width + text_offset_x, y_low + text_offset_y)
     right_text_start = (x1_2 - rect_width + text_offset_x, y_low + text_offset_y)
 
+    # Assuming percentages is a list of three values
+    max_index = percentages.index(max(percentages))  # Index of the max percentage
+    min_index = percentages.index(min(percentages))  # Index of the min percentage
+
+    print(max_index, min_index)
+    print(percentages)
+
+    # Initialize default colors (for the case where max and min are the same)
+    colors = [(0, 200, 200), (0, 200, 200), (0, 200, 200)]  # All yellow initially
+
+    if max_index != min_index:
+        colors[max_index] = (0, 255, 0)  # Max percentage in green
+        colors[min_index] = (0, 0, 255)  # Min percentage in red
+
     # Drawing and blending each rectangle individually
     rectangle_details = [
         (
             left_rect_top_left,
             left_rect_bottom_right,
-            (255, 0, 0),
+            colors[0],
             percentages[0],
         ),  # Blue
         (
             center_rect_top_left,
             center_rect_bottom_right,
-            (0, 255, 0),
+            colors[1],
             percentages[1],
         ),  # Green
         (
             right_rect_top_left,
             right_rect_bottom_right,
-            (0, 0, 255),
+            colors[2],
             percentages[2],
         ),  # Red
     ]
 
     for top_left, bottom_right, color, percentage in rectangle_details:
-        beta = max(float(percentage) / 100, 0.15)
-
-        # beta = float(percentage) / 100
-        print("beta", beta)
-        # print("beta2", beta2)
         shaded_rectangle = np.zeros_like(image)
         cv2.rectangle(shaded_rectangle, top_left, bottom_right, color, -1)
-        image = cv2.addWeighted(image, 1, shaded_rectangle, beta, 0)
+        image = cv2.addWeighted(image, 1, shaded_rectangle, 0.5, 0)
 
     # Add text on the image
     text_details = [
@@ -182,6 +193,12 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
     ]
 
     for text_start, percentage in text_details:
+        if percentage == max(percentages):
+            color = (0, 255, 0)
+        elif percentage == min(percentages):
+            color = (0, 0, 255)
+        else:
+            color = (0, 200, 200)
         draw_text_with_background(
             image,
             f"{percentage}%",
@@ -189,7 +206,7 @@ def draw_shaded_rectangles_in_goal(image, left_post, right_post, percentages):
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             thickness=2,
-            color=(255, 0, 0),
+            color=color,
         )
 
     return image
@@ -211,20 +228,26 @@ def draw_dive_prediction(
     thickness_arrow=6,
     thickness_text=2,
     text_padding=12,
-    arrow_color=(0, 0, 255),
 ):
     assert len(lr_probabilities) == 2
+
+    arrow_color_left = (
+        (0, 255, 0) if lr_probabilities[0] > lr_probabilities[1] else (0, 0, 255)
+    )
+    arrow_color_right = (
+        (0, 255, 0) if lr_probabilities[1] > lr_probabilities[0] else (0, 0, 255)
+    )
 
     x, y, w, h = gk_box
     y_arrows = y + h // 5 * 1
     cv2.arrowedLine(
-        image, (x, y_arrows), (x - length, y_arrows), arrow_color, thickness_arrow
+        image, (x, y_arrows), (x - length, y_arrows), arrow_color_left, thickness_arrow
     )
     cv2.arrowedLine(
         image,
         (x + w, y_arrows),
         (x + w + length, y_arrows),
-        arrow_color,
+        arrow_color_right,
         thickness_arrow,
     )
     draw_text_with_background(
@@ -233,17 +256,16 @@ def draw_dive_prediction(
         (x - int(length / 1.25), y_arrows - text_padding),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.75,
-        arrow_color,
+        arrow_color_left,
         thickness_text,
     )
-
     draw_text_with_background(
         image,
         f"{lr_probabilities[1]}%",
         (x + w + int(length / 7), y_arrows - text_padding),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.75,
-        arrow_color,
+        arrow_color_right,
         thickness_text,
     )
 

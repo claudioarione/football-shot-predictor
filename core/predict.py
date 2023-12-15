@@ -34,7 +34,7 @@ def analyze_video(
     fps = video.get(cv2.CAP_PROP_FPS)
     size_factor = 32
     size = (size_factor * width_rel, size_factor * height_rel)
-    slow_motion_part = int(2.5 * fps)
+    slow_motion_part = int(2 * fps)
     # Define the pose detectors for attacker and goalkeeper
     attacker_detector, goalkeeper_detector = PoseDetector(), PoseDetector()
 
@@ -71,7 +71,7 @@ def analyze_video(
                 )[0]
                 # Round the results for visualization purposes
                 att_lcr_probabilities = [
-                    format(num * 100, ".1f") for num in att_lcr_probabilities
+                    format(float(num) * 100, ".1f") for num in att_lcr_probabilities
                 ]
                 frame = draw_shot_predictions(frame, att_lcr_probabilities)
                 for _ in range(slow_motion_part):
@@ -89,7 +89,7 @@ def analyze_video(
                     goalkeeper_data
                 )[0]
                 gk_lr_probabilities = [
-                    format(num * 100, ".1f") for num in gk_lr_probabilities
+                    format(float(num) * 100, ".1f") for num in gk_lr_probabilities
                 ]
                 frame = draw_dive_prediction(
                     frame, gk_lr_probabilities, previous_goalkeeper
