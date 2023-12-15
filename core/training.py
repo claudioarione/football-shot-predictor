@@ -1,6 +1,7 @@
 from pose_estimation.yolo_model import YOLO
 from pose_estimation.pose_module import PoseDetector
 from utils import utils
+from tqdm import tqdm
 import cv2
 import numpy as np
 import pandas as pd
@@ -23,6 +24,8 @@ def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
 
     video = cv2.VideoCapture(path)
     size_factor = 32
+    total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    progress_bar = tqdm(total=total_frames, desc="Analyzing video", unit="frame")
 
     size = (size_factor * width_rel, size_factor * height_rel)
 
@@ -38,11 +41,12 @@ def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
         ret, frame = video.read()
         if not ret:
             break
-        # Resize the frame
         frame = cv2.resize(frame, size)
         original_image = frame.copy()
-
+        progress_bar.update(1)
         if stop:
+            progress_bar.n = total_frames
+            progress_bar.update(0)
             break
 
         outputs = model.evaluate(frame)
@@ -50,16 +54,13 @@ def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
         if soccer_ball_box:
             utils.draw_object_bounding_box(frame, soccer_ball_box)
 
-        # Selection
         filtered_boxes = utils.non_maxima_suppression(boxes, class_scores)
 
-        # Identify attacker and goalkeeper
         current_attacker, current_goalkeeper = utils.identify_players(
             filtered_boxes, previous_attacker, previous_goalkeeper
         )
         previous_attacker, previous_goalkeeper = current_attacker, current_goalkeeper
 
-        # Process players (pose estimation)
         utils.process_player(frame, current_attacker, attacker_detector)
         utils.process_player(frame, current_goalkeeper, goalkeeper_detector)
         landmarks_attacker_list = attacker_detector.get_position(current_attacker)
@@ -69,11 +70,8 @@ def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
             goalkeeper_features, landmarks_goalkeeper_list
         )
 
-        # Draw boundaries for attacker and goalkeeper
         utils.draw_object_bounding_box(frame, current_attacker)
         utils.draw_object_bounding_box(frame, current_goalkeeper)
-
-        cv2.imshow("Football Shot Predictor", frame)
 
         stop = utils.check_if_stop_video(
             soccer_ball_box, current_attacker, attacker_detector
@@ -82,16 +80,15 @@ def analyze_video(path: str, output: int, width_rel=30, height_rel=22) -> tuple:
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
+    progress_bar.close()
     video.release()
     cv2.destroyAllWindows()
     att_label, gk_label = output
-    # Select 33 keypoints * last 10 frames before kick
     return np.append(attacker_features[-33 * 10 :], att_label), np.append(
         goalkeeper_features[-33 * 5 :], gk_label
     )
 
 
-# FIXME: this is for training
 def create_training_dataset(
     training_dataframe: pd.DataFrame, save_training_data_path: str
 ):
